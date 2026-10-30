@@ -38,6 +38,8 @@ class Hero {
     + try_move(d: Direction)
     + special_attack()
     + use_thing(index: Int)
+    + damage(force: Int)
+    + is_dead(): Bool
 }
 
 Hero ..|> IActor
@@ -135,10 +137,14 @@ end note
 
 interface ICellObject {
     + get_position(): Position
+    + damage(force: Int)
+    + is_dead(): Bool
 }
 
 interface IEnemy {
     + get_position(): Position
+    + damage(force: Int)
+    + is_dead(): Bool
     + step()
 }
 
@@ -154,10 +160,13 @@ class Monster {
     - mental_health: Int
     - self_confidence: Int
     - position: Position
+    - map: IMap
 
-    + constructor(params: MonsterParams, position: Position)
+    + constructor(params: MonsterParams, position: Position, map: IMap)
     + get_position(): Position
     + step()
+    + damage(force: Int)
+    + is_dead(): Bool
 }
 
 Monster ..|> IEnemy
@@ -166,10 +175,18 @@ class BossMonster {
     - mental_health: Int
     - self_confidence: Int
     - position: Position
+    - map: IMap
+    - hero: Hero
+    + damage(force: Int)
+    + is_dead(): Bool
 
-    + constructor(params: MonsterParams, position: Position)
+    + constructor(params: MonsterParams, position: Position, map: IMap, hero: Hero)
     + get_position(): Position
     + step()
+}
+
+interface IBossStrategy {
+    + get_action(hero: Hero, boss: BossMonster): Callable
 }
 
 BossMonster ..|> IEnemy
@@ -331,6 +348,7 @@ class GlobalConfig {
     - monster_param_pool: MonsterParams[]
     - boss_param_pool: MonsterParams[]
     - object_view: Map<Type, String>
+    - boss_strategies: Map<String, Callable>
 
     {static} + get_instance(): GlobalConfig
     + get_map_size(): (Int, Int)
@@ -338,6 +356,8 @@ class GlobalConfig {
     + get_monster_param_pool(): MonsterParams[]
     + get_boss_param_pool(): MonsterParams[]
     + get_object_view(o: ICellObject): String
+    + get_boss_strategies(): Iterator<String>
+    + get_boss_strategy(name: String): Callable
     - load()
 }
 
