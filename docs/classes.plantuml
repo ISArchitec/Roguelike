@@ -204,8 +204,16 @@ Certificate ..|> ICellObject
 
 class IDCard {
     - position: Optional<Position>
+    - tick_since: Int
+    - force: Int
+    - radius: Int
+    - timeout: Int
+
+    + constructor(force: Int, radius: Int, timeout: Int, position: Position, tick_since: Int = 0)
 
     + get_position(): Position
+    + calculate_force(): Int
+    + calculate_radius(): Int
 }
 
 IDCard ..|> IThing
@@ -349,6 +357,7 @@ class GlobalConfig {
     - boss_param_pool: MonsterParams[]
     - object_view: Map<Type, String>
     - boss_strategies: Map<String, Callable>
+    - boss_to_id_cards: Map<Type, List<IDCard>>
 
     {static} + get_instance(): GlobalConfig
     + get_map_size(): (Int, Int)
@@ -358,6 +367,7 @@ class GlobalConfig {
     + get_object_view(o: ICellObject): String
     + get_boss_strategies(): Iterator<String>
     + get_boss_strategy(name: String): Callable
+    + get_boss_prize(boss: BossMonster): Iterator<IDCard>
     - load()
 }
 
