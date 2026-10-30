@@ -119,8 +119,9 @@ class Map {
     - width: Int
     - height: Int
     - console: IConsoleView
+    - on_terminate_object: Callback
 
-    {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[], console: IConsoleView)
+    {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[], console: IConsoleView, on_terminate_object: Callback)
     + draw()
     + move(o: ICellObject, direction: Direction): Bool
     + interact(o: ICellObject, direction: Direction, force: Int)
@@ -207,6 +208,7 @@ class Certificate {
 
     + get_position(): Position
     + interact(Int)
+    + is_inactive(): Bool
 }
 
 Certificate ..|> ICellObject
@@ -217,6 +219,7 @@ class IDCard {
     - force: Int
     - radius: Int
     - timeout: Int
+    - tick_getter: Option<Callback<Int>>
 
     + constructor(force: Int, radius: Int, timeout: Int, position: Position, tick_since: Int = 0)
 
@@ -224,6 +227,8 @@ class IDCard {
     + calculate_force(): Int
     + calculate_radius(): Int
     + interact(Int)
+    + is_inactive(): Bool
+    + set_tick_getter(cb: Callback)
 }
 
 IDCard ..|> ICellObject
@@ -259,7 +264,9 @@ class Game {
     + has_lost_level(): Bool
     + has_won_totally(): Bool
     + stop()
+    + get_ticks(): Int
     - tick()
+    - count_down_on_terminate()
 }
 
 note right of Game::tick
