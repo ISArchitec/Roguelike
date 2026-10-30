@@ -205,6 +205,10 @@ BossMonster ..|> IEnemy
 
 class Certificate {
     - position: Optional<Position>
+    - params: HeroParams
+
+    + constructor(params: HeroParams)
+    + apply(hero: HeroParams): HeroParams
 
     + get_position(): Position
     + interact(Int)
