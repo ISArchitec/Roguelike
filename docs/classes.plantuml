@@ -4,6 +4,13 @@ skinparam shadowing false
 
 title Диаграмма классов
 
+enum Direction {
+    DOWN
+    UP
+    LEFT
+    RIGHT
+}
+
 class HeroParams {
     + mental_health: Int {readonly} 
     + inner_equilibrium: Int {readonly} 
@@ -21,12 +28,16 @@ class Hero {
     - id_pool: IDCard[]
     - currentCard: Optional<IDCard>
     - eventQueue: Queue<IEvent>
+    - map: IMap
 
-    {static} + create_new(params: HeroParams, position: Position, reserve: ISpecialThing[], eventQueue: Queue<IEvent>)
-    {static} + create_from(params: HeroParams, position: Position, reserve: ISpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>)
+    {static} + create_new(params: HeroParams, position: Position, reserve: ISpecialThing[], eventQueue: Queue<IEvent>, map: IMap)
+    {static} + create_from(params: HeroParams, position: Position, reserve: ISpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap)
     + get_position(): Position
     + set_initial_position(p: Position)
     + step()
+    + try_move(d: Direction)
+    + special_attack()
+    + use_thing(index: Int)
 }
 
 Hero ..|> IActor
@@ -70,7 +81,11 @@ class RandomLevelGenerator {
 
 RandomSectionGenerator ..|> ISectionGenerator
 
-interface IMap {}
+interface IMap {
+    + move(o: ICellObject, direction: Direction): Bool
+    + attack(o: ICellObject, direction: Direction, force: Int)
+    + special_attack(o: ICellObject, radius: Int, force: Int)
+}
 
 class MapBuilder {
     - passages: Passage[]
@@ -91,9 +106,13 @@ class Map {
     - height: Int
     - enemy_count: Int
     - thing_count: Int
+    - console: IConsoleView
 
-    {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[])
-    + draw(console: IConsoleView)
+    {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[], console: IConsoleView)
+    + draw()
+    + move(o: ICellObject, direction: Direction): Bool
+    + attack(o: ICellObject, direction: Direction, force: Int)
+    + special_attack(o: ICellObject, radius: Int, force: Int)
 }
 
 Map ..|> IMap
@@ -260,6 +279,8 @@ interface IConsoleView {
     + on_lost()
     + draw_passage(p: Passage)
     + draw_object(p: ICellObject)
+    + register_attack(p: Position, d: Direction)
+    + register_special_attack(p: Position, radius: Int)
 }
 
 class Cell {
@@ -291,10 +312,7 @@ class Position {
     + y: Int {readonly}
 
     + constructor(x: Int, y: Int)
-    + move_left(): Position
-    + move_right(): Position
-    + move_up(): Position
-    + move_down(): Position
+    + move(d: Direction): Option<Position>
 }
 
 note right of Position::constructor
@@ -331,6 +349,8 @@ class Console {
     + on_lost()
     + draw_passage(p: Passage)
     + draw_object(o: ICellObject)
+    + register_attack(p: Position, d: Direction)
+    + register_special_attack(p: Position, radius: Int)
 
     - show_start_menu()
     - run_new_game()
