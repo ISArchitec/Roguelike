@@ -46,7 +46,7 @@ class Hero {
 
     + interact(force: Int)
     + apply_modifiers(params: HeroParams)
-    + is_dead(): Bool
+    + is_inactive(): Bool
     + add_id_card(card: IDCard)
     + add_certificate(certificate: Certificate)
 }
@@ -118,8 +118,6 @@ class Map {
     - cells: Cell[]
     - width: Int
     - height: Int
-    - enemy_count: Int
-    - thing_got: Int
     - console: IConsoleView
 
     {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[], console: IConsoleView)
@@ -151,13 +149,13 @@ end note
 interface ICellObject {
     + get_position(): Position
     + interact(force: Int)
-    + is_dead(): Bool
+    + is_inactive(): Bool
 }
 
 interface IEnemy {
     + get_position(): Position
     + interact(force: Int)
-    + is_dead(): Bool
+    + is_inactive(): Bool
     + step()
 }
 
@@ -179,7 +177,7 @@ class Monster {
     + get_position(): Position
     + step()
     + interact(force: Int)
-    + is_dead(): Bool
+    + is_inactive(): Bool
 }
 
 Monster ..|> IEnemy
@@ -191,7 +189,7 @@ class BossMonster {
     - map: IMap
     - hero: Hero
     + interact(force: Int)
-    + is_dead(): Bool
+    + is_inactive(): Bool
 
     + constructor(params: MonsterParams, position: Position, map: IMap, hero: Hero)
     + get_position(): Position
@@ -248,6 +246,8 @@ class Game {
     - map: Map
     - actors: IActor[]
     - ticks: Int
+    - enemy_count: Int
+    - thing_got: Int
     - hero: Hero
     - is_stopped: Bool
     - console: IConsoleView
