@@ -22,7 +22,8 @@ class Hero {
     - currentCard: Optional<IDCard>
     - eventQueue: Queue<IEvent>
 
-    + constructor(params: HeroParams, position: Position, reserve: ISpecialThing[], eventQueue: Queue<IEvent>)
+    {static} + create_new(params: HeroParams, position: Position, reserve: ISpecialThing[], eventQueue: Queue<IEvent>)
+    {static} + create_from(params: HeroParams, position: Position, reserve: ISpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>)
     + get_position(): Position
     + set_initial_position(p: Position)
     + step()
@@ -104,6 +105,11 @@ class Passage {
     + constructor(first: Position, second: Position)
 }
 
+class PassageLoader {
+    {static} + load_from(json: Json): Passage
+    {static} + save_to(p: Passage): Json
+}
+
 note right of Passage::constructor
   only direct Passage is permitted
 end note
@@ -173,6 +179,11 @@ interface ISpecialThing {}
 
 ISpecialThing ..|> IThing
 
+class ISpecialThingLoader {
+    {static} + load_from(json: Json): ISpecialThing
+    {static} + save_to(t: ISpecialThing): Json
+}
+
 class Game {
     - section_passed: Int
     - level_generator: ILevelGenerator
@@ -181,12 +192,14 @@ class Game {
     - ticks: Int
     - hero: Hero
     - is_stopped: Bool
+    - console: IConsole
 
-    {static} + create_new(level_generator: ILevelGenerator, event_queue: Queue<IEvent>)
-    {static} + create_from(section_passed: Int, level_generator: ILevelGenerator, map: Map, actors: IActor[], ticks: Int, hero: Hero)
+    {static} + create_new(level_generator: ILevelGenerator, event_queue: Queue<IEvent>, console: IConsole)
+    {static} + create_from(section_passed: Int, level_generator: ILevelGenerator, map: Map, actors: IActor[], ticks: Int, hero: Hero, console: IConsole)
     + run_game()
-    + has_won(): Bool
-    + has_lost(): Bool
+    + has_won_level(): Bool
+    + has_lost_level(): Bool
+    + has_won_totally(): Bool
     + stop()
     - tick()
 }
@@ -203,20 +216,28 @@ end note
 note right of Game::run_game
   <code>
   run_game():
-    while not has_won() and not has_lost() and not is_stopped:
-        tick()
-        ++ticks
+    while not has_won_totally():
+        while not has_won() and not has_lost() and not is_stopped:
+            tick()
+            ++ticks
+        if is_stopped:
+            return
+        if has_lost():
+            console.on_lost()
+            return
+        console.on_won()
+        map = level_generator.generate_level(...)
   </code>
 end note
 
 class GameLoader {
-    {static} + load_from(json: Json): Game
+    {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IConsole): Game
     {static} + save_to(game: Game): Json
 }
 
 class RandomLevelGeneratorLoader {
     {static} + load_from(json: Json): ILevelGenerator
-    {static} + save_to(game: ILevelGenerator): Json
+    {static} + save_to(g: ILevelGenerator): Json
 }
 
 class MapLoader {
@@ -249,6 +270,16 @@ class Cell {
     + empty(): Bool
 }
 
+class CellLoader {
+    {static} + load_from(json: Json): Cell
+    {static} + save_to(cell: Cell): Json
+}
+
+class ICellObjectLoader {
+    {static} + load_from(json: Json): ICellObject
+    {static} + save_to(o: ICellObject): Json
+}
+
 class Position {
     + x: Int {readonly}
     + y: Int {readonly}
@@ -263,6 +294,11 @@ class Position {
 note right of Position::constructor
   position should be inside the map (check GlobalConfig)
 end note
+
+class PositionLoader {
+    {static} + load_from(json: Json): Position
+    {static} + save_to(p: Position): Json
+}
 
 class GlobalConfig {
     {static} - config: GlobalConfig
