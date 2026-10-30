@@ -24,14 +24,14 @@ class Hero {
     - self_confidence: Int
     - reaction: Int
     - position: Position
-    - reserve: ISpecialThing[]
+    - reserve: SpecialThing[]
     - id_pool: IDCard[]
     - currentCard: Optional<IDCard>
     - eventQueue: Queue<IEvent>
     - map: IMap
 
-    {static} + create_new(params: HeroParams, position: Position, reserve: ISpecialThing[], eventQueue: Queue<IEvent>, map: IMap)
-    {static} + create_from(params: HeroParams, position: Position, reserve: ISpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap)
+    {static} + create_new(params: HeroParams, position: Position, reserve: SpecialThing[], eventQueue: Queue<IEvent>, map: IMap)
+    {static} + create_from(params: HeroParams, position: Position, reserve: SpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap)
     + get_position(): Position
     + set_initial_position(p: Position)
     + step()
@@ -39,6 +39,7 @@ class Hero {
     + special_attack()
     + use_thing(index: Int)
     + damage(force: Int)
+    + apply_modifiers(params: HeroParams)
     + is_dead(): Bool
 }
 
@@ -219,13 +220,18 @@ class IDCard {
 IDCard ..|> IThing
 IDCard ..|> ICellObject
 
-interface ISpecialThing {}
+class SpecialThing {
+    - modifier: HeroParams
 
-ISpecialThing ..|> IThing
+    + constructor(params: HeroParams)
+    + apply(hero: Hero)
+}
+
+SpecialThing ..|> IThing
 
 class ISpecialThingLoader {
-    {static} + load_from(json: Json): ISpecialThing
-    {static} + save_to(t: ISpecialThing): Json
+    {static} + load_from(json: Json): SpecialThing
+    {static} + save_to(t: SpecialThing): Json
 }
 
 class Game {
@@ -358,6 +364,7 @@ class GlobalConfig {
     - object_view: Map<Type, String>
     - boss_strategies: Map<String, Callable>
     - boss_to_id_cards: Map<Type, List<IDCard>>
+    - initial_thing_pool: List<SpecialThing>
 
     {static} + get_instance(): GlobalConfig
     + get_map_size(): (Int, Int)
@@ -368,6 +375,7 @@ class GlobalConfig {
     + get_boss_strategies(): Iterator<String>
     + get_boss_strategy(name: String): Callable
     + get_boss_prize(boss: BossMonster): Iterator<IDCard>
+    + get_special_thing(i: Int): SpecialThing
     - load()
 }
 
