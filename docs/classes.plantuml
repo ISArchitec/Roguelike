@@ -40,6 +40,9 @@ class Hero {
     + special_attack()
     + use_thing(index: Int)
     + get_things(): Iterator<SpecialThing>
+    + get_id_cards(): Iterator<IdCard>
+    + has_current_id_card(): Bool
+    + use_id_card(index: Int)
 
     + interact(force: Int)
     + apply_modifiers(params: HeroParams)
@@ -327,6 +330,7 @@ interface IConsoleView {
     + register_attack(p: Position, d: Direction)
     + register_special_attack(p: Position, radius: Int)
     + show_things(ts: SpecialThing[])
+    + choose_from_cards(ics: IdCard[]): Int
 }
 
 class Cell {
@@ -407,6 +411,7 @@ class Console {
     + register_move(p: Position, d: Direction)
     + register_attack(p: Position, d: Direction)
     + register_special_attack(p: Position, radius: Int)
+    + choose_from_cards(ics: IdCard[]): Int
 
     - show_start_menu()
     - run_new_game()
