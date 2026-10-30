@@ -1,0 +1,433 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+title Диаграмма классов
+
+enum Direction {
+    DOWN
+    UP
+    LEFT
+    RIGHT
+}
+
+class HeroParams {
+    + mental_health: Int {readonly} 
+    + inner_equilibrium: Int {readonly} 
+    + self_confidence: Int {readonly} 
+    + reaction: Int {readonly} 
+}
+
+class Hero {
+    - mental_health: Int
+    - inner_equilibrium: Int
+    - self_confidence: Int
+    - reaction: Int
+    - position: Position
+    - reserve: SpecialThing[]
+    - id_pool: IDCard[]
+    - certificates: List<Certificate>
+    - currentCard: Optional<IDCard>
+    - eventQueue: Queue<IEvent>
+    - map: IMap
+
+    {static} + create_new(params: HeroParams, position: Position, reserve: SpecialThing[], eventQueue: Queue<IEvent>, map: IMap)
+    {static} + create_from(params: HeroParams, position: Position, reserve: SpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap, certificates: List<Certificate>)
+    + get_position(): Position
+    + set_initial_position(p: Position)
+    + step()
+    + try_move(d: Direction)
+    + special_attack()
+    + use_thing(index: Int)
+    + get_things(): Iterator<SpecialThing>
+    + get_id_cards(): Iterator<IdCard>
+    + has_current_id_card(): Bool
+    + use_id_card(index: Int)
+
+    + interact(force: Int)
+    + apply_modifiers(params: HeroParams)
+    + is_inactive(): Bool
+    + add_id_card(card: IDCard)
+    + add_certificate(certificate: Certificate)
+}
+
+Hero ..|> IActor
+Hero ..|> ICellObject
+
+interface IEvent {
+    + accept_hero(hero: Hero)
+}
+
+class MovingEvent {
+    + accept_hero(hero: Hero)
+}
+
+MovingEvent ..|> IEvent
+
+class SpecialAttackEvent {
+    + accept_hero(hero: Hero)
+}
+
+SpecialAttackEvent ..|> IEvent
+
+class SpecialThingEvent {
+    - index: Int
+
+    + constructor(index: Int)
+    + accept_hero(hero: Hero)
+}
+
+SpecialThingEvent ..|> IEvent
+
+interface ILevelGenerator {
+    + generate_level(section_number: Int): Map
+}
+
+class RandomLevelGenerator {
+    - level_in_section: Int
+
+    {static} + create_new()
+    {static} + create_from(level_in_section: Int)
+
+    + generate_level(section_number: Int, hero: Hero): Map
+    - generate_enemy(): IEnemy
+}
+
+RandomLevelGenerator ..|> ILevelGenerator
+
+interface IMap {
+    + move(o: ICellObject, direction: Direction): Bool
+    + interact(o: ICellObject, direction: Direction, force: Int)
+    + special_attack(o: ICellObject, radius: Int, force: Int)
+}
+
+class MapBuilder {
+    - passages: Passage[]
+    - cells: Cell[]
+    - width: Int
+    - height: Int
+
+    {static} + new(width: Int, height: Int)
+    + add_object(o: ICellObject)
+    + add_passage(p: Passage)
+    + to_map(): Map
+}
+
+class Map {
+    - passages: Passage[]
+    - cells: Cell[]
+    - width: Int
+    - height: Int
+    - console: IConsoleView
+    - on_terminate_object: Callback
+
+    {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[], console: IConsoleView, on_terminate_object: Callback)
+    + draw()
+    + move(o: ICellObject, direction: Direction): Bool
+    + interact(o: ICellObject, direction: Direction, force: Int)
+    + special_attack(o: ICellObject, radius: Int, force: Int)
+    + add_object(o: ICellObject)
+}
+
+Map ..|> IMap
+
+class Passage {
+    + first: Position {readonly}
+    + second: Position {readonly}
+
+    + constructor(first: Position, second: Position)
+}
+
+class PassageLoader {
+    {static} + load_from(json: Json): Passage
+    {static} + save_to(p: Passage): Json
+}
+
+note right of Passage::constructor
+  only direct Passage is permitted
+end note
+
+interface ICellObject {
+    + get_position(): Position
+    + interact(force: Int)
+    + is_inactive(): Bool
+}
+
+interface IEnemy {
+    + get_position(): Position
+    + interact(force: Int)
+    + is_inactive(): Bool
+    + step()
+}
+
+IEnemy ..|> IActor
+IEnemy ..|> ICellObject
+
+class MonsterParams {
+    + mental_health: Int {readonly}
+    + self_confidence: Int {readonly}
+}
+
+class Monster {
+    - mental_health: Int
+    - self_confidence: Int
+    - position: Position
+    - map: IMap
+
+    + constructor(params: MonsterParams, position: Position, map: IMap)
+    + get_position(): Position
+    + step()
+    + interact(force: Int)
+    + is_inactive(): Bool
+}
+
+Monster ..|> IEnemy
+
+class BossMonster {
+    - mental_health: Int
+    - self_confidence: Int
+    - position: Position
+    - map: IMap
+    - hero: Hero
+    + interact(force: Int)
+    + is_inactive(): Bool
+
+    + constructor(params: MonsterParams, position: Position, map: IMap, hero: Hero)
+    + get_position(): Position
+    + step()
+}
+
+interface IBossStrategy {
+    + get_action(hero: Hero, boss: BossMonster): Callable
+}
+
+BossMonster ..|> IEnemy
+
+class Certificate {
+    - position: Optional<Position>
+    - params: HeroParams
+
+    + constructor(params: HeroParams)
+    + apply(hero: HeroParams): HeroParams
+
+    + get_position(): Position
+    + interact(Int)
+    + is_inactive(): Bool
+}
+
+Certificate ..|> ICellObject
+
+class IDCard {
+    - position: Optional<Position>
+    - tick_since: Int
+    - force: Int
+    - radius: Int
+    - timeout: Int
+    - tick_getter: Option<Callback<Int>>
+
+    + constructor(force: Int, radius: Int, timeout: Int, position: Position, tick_since: Int = 0)
+
+    + get_position(): Position
+    + calculate_force(): Int
+    + calculate_radius(): Int
+    + interact(Int)
+    + is_inactive(): Bool
+    + set_tick_getter(cb: Callback)
+}
+
+IDCard ..|> ICellObject
+
+class SpecialThing {
+    - modifier: HeroParams
+
+    + constructor(params: HeroParams)
+    + apply(hero: Hero)
+}
+
+class SpecialThingLoader {
+    {static} + load_from(json: Json): SpecialThing
+    {static} + save_to(t: SpecialThing): Json
+}
+
+class Game {
+    - section_passed: Int
+    - level_generator: ILevelGenerator
+    - map: Map
+    - actors: IActor[]
+    - ticks: Int
+    - enemy_count: Int
+    - thing_got: Int
+    - hero: Hero
+    - is_stopped: Bool
+    - console: IConsoleView
+
+    {static} + create_new(level_generator: ILevelGenerator, event_queue: Queue<IEvent>, console: IConsoleView)
+    {static} + create_from(section_passed: Int, level_generator: ILevelGenerator, map: Map, actors: IActor[], ticks: Int, hero: Hero, console: IConsoleView)
+    + run_game()
+    + has_won_level(): Bool
+    + has_lost_level(): Bool
+    + has_won_totally(): Bool
+    + stop()
+    + get_ticks(): Int
+    - tick()
+    - count_down_on_terminate()
+}
+
+note right of Game::tick
+  <code>
+  tick():
+    for actor in actors:
+        actor.step()
+    map.draw()
+  </code>
+end note
+
+note right of Game::run_game
+  <code>
+  run_game():
+    while not has_won_totally():
+        while not has_won() and not has_lost() and not is_stopped:
+            tick()
+            if ... :
+                map.
+            map.draw(console)
+            ++ticks
+        if is_stopped:
+            return
+        if has_lost():
+            console.on_lost()
+            return
+        console.on_won()
+        map = level_generator.generate_level(...)
+  </code>
+end note
+
+class GameLoader {
+    {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IConsoleView): Game
+    {static} + save_to(game: Game): Json
+}
+
+class RandomLevelGeneratorLoader {
+    {static} + load_from(json: Json): ILevelGenerator
+    {static} + save_to(g: ILevelGenerator): Json
+}
+
+class MapLoader {
+    {static} + load_from(json: Json): Map
+    {static} + save_to(game: Map): Json
+}
+
+class IActorLoader {
+    {static} + load_from(json: Json): IActor
+    {static} + save_to(game: IActor): Json
+}
+
+interface IActor {
+    + step()
+}
+
+interface IConsoleView {
+    + on_won()
+    + on_lost()
+    + draw_passage(p: Passage)
+    + draw_object(p: ICellObject)
+    + register_move(p: Position, d: Direction)
+    + register_attack(p: Position, d: Direction)
+    + register_special_attack(p: Position, radius: Int)
+    + show_things(ts: SpecialThing[])
+    + choose_from_cards(ics: IdCard[]): Int
+}
+
+class Cell {
+    + position: Position {readonly}
+    - objects: Set<ICellObject>
+
+    {static} + create_new(p: Position)
+    {static} + create_from(p: Position, objects: ICellObject[])
+
+    + add_cell_object(o: ICellObject)
+    + remove_cell_object(o: ICellObject)
+    + check_in(o: ICellObject): Bool
+    + iterate(): Iterator<ICellObject>
+    + empty(): Bool
+}
+
+class CellLoader {
+    {static} + load_from(json: Json): Cell
+    {static} + save_to(cell: Cell): Json
+}
+
+class ICellObjectLoader {
+    {static} + load_from(json: Json): ICellObject
+    {static} + save_to(o: ICellObject): Json
+}
+
+class Position {
+    + x: Int {readonly}
+    + y: Int {readonly}
+
+    + constructor(x: Int, y: Int)
+    + move(d: Direction): Option<Position>
+}
+
+note right of Position::constructor
+  position should be inside the map (check GlobalConfig)
+end note
+
+class PositionLoader {
+    {static} + load_from(json: Json): Position
+    {static} + save_to(p: Position): Json
+}
+
+class GlobalConfig {
+    {static} - config: GlobalConfig
+    - map_size: (Int, Int)
+    - initial_hero_params: HeroParams
+    - monster_param_pool: MonsterParams[]
+    - boss_param_pool: MonsterParams[]
+    - object_view: Map<Type, String>
+    - boss_strategies: Map<String, Callable>
+    - boss_id_cards: List<IDCard>
+    - certificates: List<Certificate>
+    - initial_thing_pool: List<SpecialThing>
+
+    {static} + get_instance(): GlobalConfig
+    + get_map_size(): (Int, Int)
+    + get_initial_hero_params(): HeroParams
+    + get_monster_param_pool(): MonsterParams[]
+    + get_boss_param_pool(): MonsterParams[]
+    + get_object_view(o: ICellObject): String
+    + get_boss_strategies(): Iterator<String>
+    + get_boss_strategy(name: String): Callable
+    + get_boss_prizes(i: Int): IDCard
+    + get_certificate(i: Int): Certificate
+    + get_special_thing(i: Int): SpecialThing
+    - load()
+}
+
+class Console {
+    - game: Game
+
+    + run()
+    + on_won()
+    + on_lost()
+    + draw_passage(p: Passage)
+    + draw_object(o: ICellObject)
+    + register_move(p: Position, d: Direction)
+    + register_attack(p: Position, d: Direction)
+    + register_special_attack(p: Position, radius: Int)
+    + choose_from_cards(ics: IdCard[]): Int
+
+    - show_start_menu()
+    - run_new_game()
+    - continue_game()
+    - start_event_handling()
+    - show_win_screen()
+    - show_lose_screen()
+}
+
+Console ..|> IConsoleView
+
+
+
+@enduml
