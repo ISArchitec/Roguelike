@@ -1,0 +1,266 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+title Диаграмма классов
+
+class HeroParams {
+    + mental_health: Int {readonly} 
+    + inner_equilibrium: Int {readonly} 
+    + self_confidence: Int {readonly} 
+    + reaction: Int {readonly} 
+}
+
+class Hero {
+    - mental_health: Int
+    - inner_equilibrium: Int
+    - self_confidence: Int
+    - reaction: Int
+    - position: Position
+    - reserve: ISpecialThing[]
+    - id_pool: IDCard[]
+    - currentCard: Optional<IDCard>
+    - eventQueue: Queue<IEvent>
+
+    + constructor(params: HeroParams, position: Position)
+    + get_position(): Position
+    + step()
+}
+
+Hero ..|> IActor
+Hero ..|> ICellObject
+
+interface IEvent {
+    + accept_hero(hero: Hero)
+}
+
+class MovingEvent {
+    + accept_hero(hero: Hero)
+}
+
+MovingEvent ..|> IEvent
+
+class SpecialAttackEvent {
+    + accept_hero(hero: Hero)
+}
+
+SpecialAttackEvent ..|> IEvent
+
+class SpecialThingEvent {
+    + accept_hero(hero: Hero)
+}
+
+SpecialThingEvent ..|> IEvent
+
+interface ILevelGenerator {
+    + generate_level(section_number: Int): Map
+}
+
+class RandomLevelGenerator {
+    - level_in_section: Int
+
+    {static} + create_new()
+    {static} + create_from(level_in_section: Int)
+
+    + generate_level(section_number: Int): Map
+}
+
+RandomSectionGenerator ..|> ISectionGenerator
+
+interface IMap {}
+
+class MapBuilder {
+    - passages: Passage[]
+    - cells: Cell[]
+    - width: Int
+    - height: Int
+
+    {static} + new(width: Int, height: Int)
+    + add_object(o: ICellObject)
+    + add_passage(p: Passage)
+    + to_map(): Map
+}
+
+class Map {
+    - passages: Passage[]
+    - cells: Cell[]
+    - width: Int
+    - height: Int
+    - enemy_count: Int
+    - thing_count: Int
+
+    {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[])
+    + draw()
+}
+
+Map ..|> IMap
+
+class Passage {
+    + first: Position {readonly}
+    + second: Position {readonly}
+
+    + constructor(first: Position, second: Position)
+}
+
+note right of Passage::constructor
+  only direct Passage is permitted
+end note
+
+interface ICellObject {
+    + get_position(): Position
+}
+
+interface IEnemy {}
+
+class Monster {}
+
+Monster ..|> IEnemy
+
+class BossMonster {}
+
+BossMonster ..|> IEnemy
+
+interface IThing {}
+
+class Certificate {
+    - position: Optional<Position>
+
+    + get_position(): Position
+}
+
+Certificate ..|> IThing
+Certificate ..|> ICellObject
+
+class IDCard {
+    - position: Optional<Position>
+
+    + get_position(): Position
+}
+
+IDCard ..|> IThing
+IDCard ..|> ICellObject
+
+interface ISpecialThing {}
+
+ISpecialThing ..|> IThing
+
+class Game {
+    - section_passed: Int
+    - level_generator: ILevelGenerator
+    - map: Map
+    - actors: IActor[]
+    - ticks: Int
+    - hero: Hero
+    - is_stopped: Bool
+
+    {static} + create_new(level_generator: ILevelGenerator, event_queue: Queue<IEvent>)
+    {static} + create_from(section_passed: Int, level_generator: ILevelGenerator, map: Map, actors: IActor[], ticks: Int, hero: Hero)
+    + run_game()
+    + has_won(): Bool
+    + has_lost(): Bool
+    + stop()
+    - tick()
+}
+
+note right of Game::tick
+  <code>
+  tick():
+    for actor in actors:
+        actor.step()
+    map.draw()
+  </code>
+end note
+
+note right of Game::run_game
+  <code>
+  run_game():
+    while not has_won() and not has_lost() and not is_stopped:
+        tick()
+        ++ticks
+  </code>
+end note
+
+class GameLoader {
+    {static} + load_from(json: Json): Game
+    {static} + save_to(game: Game): Json
+}
+
+class RandomLevelGeneratorLoader {
+    {static} + load_from(json: Json): ILevelGenerator
+    {static} + save_to(game: ILevelGenerator): Json
+}
+
+class MapLoader {
+    {static} + load_from(json: Json): Map
+    {static} + save_to(game: Map): Json
+}
+
+class IActorLoader {
+    {static} + load_from(json: Json): IActor
+    {static} + save_to(game: IActor): Json
+}
+
+interface IActor {
+    + step()
+}
+
+interface IConsoleView {}
+
+class Cell {
+    + position: Position {readonly}
+    - objects: Set<ICellObject>
+
+    {static} + create_new(p: Position)
+    {static} + create_from(p: Position, objects: ICellObject[])
+
+    + add_cell_object(o: ICellObject)
+    + remove_cell_object(o: ICellObject)
+    + check_in(o: ICellObject): Bool
+    + iterate(): Iterator<ICellObject>
+    + empty(): Bool
+}
+
+class Position {
+    + x: Int {readonly}
+    + y: Int {readonly}
+
+    + constructor(x: Int, y: Int)
+    + move_left(): Position
+    + move_right(): Position
+    + move_up(): Position
+    + move_down(): Position
+}
+
+note right of Position::constructor
+  position should be inside the map (check GlobalConfig)
+end note
+
+class GlobalConfig {
+    {static} - config: GlobalConfig
+    - map_size: (Int, Int)
+    - initial_hero_params: HeroParams
+
+    {static} + get_instance(): GlobalConfig
+    + get_map_size(): (Int, Int)
+    + get_initial_hero_params(): HeroParams
+    - load()
+}
+
+class Console {
+    - game: Game
+
+    + run()
+
+    - show_start_menu()
+    - run_new_game()
+    - continue_game()
+    - start_event_handling()
+    - show_win_screen()
+    - show_lose_screen()
+}
+
+Console ..|> IConsoleView
+
+
+
+@enduml
