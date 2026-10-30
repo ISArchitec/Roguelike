@@ -26,21 +26,24 @@ class Hero {
     - position: Position
     - reserve: SpecialThing[]
     - id_pool: IDCard[]
+    - certificates: List<Certificate>
     - currentCard: Optional<IDCard>
     - eventQueue: Queue<IEvent>
     - map: IMap
 
     {static} + create_new(params: HeroParams, position: Position, reserve: SpecialThing[], eventQueue: Queue<IEvent>, map: IMap)
-    {static} + create_from(params: HeroParams, position: Position, reserve: SpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap)
+    {static} + create_from(params: HeroParams, position: Position, reserve: SpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap, certificates: List<Certificate>)
     + get_position(): Position
     + set_initial_position(p: Position)
     + step()
     + try_move(d: Direction)
     + special_attack()
     + use_thing(index: Int)
-    + damage(force: Int)
+    + interact(force: Int)
     + apply_modifiers(params: HeroParams)
     + is_dead(): Bool
+    + add_id_card(card: IDCard)
+    + add_certificate(certificate: Certificate)
 }
 
 Hero ..|> IActor
@@ -86,7 +89,7 @@ RandomSectionGenerator ..|> ISectionGenerator
 
 interface IMap {
     + move(o: ICellObject, direction: Direction): Bool
-    + attack(o: ICellObject, direction: Direction, force: Int)
+    + interact(o: ICellObject, direction: Direction, force: Int)
     + special_attack(o: ICellObject, radius: Int, force: Int)
 }
 
@@ -108,14 +111,15 @@ class Map {
     - width: Int
     - height: Int
     - enemy_count: Int
-    - thing_count: Int
+    - thing_got: Int
     - console: IConsoleView
 
     {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[], console: IConsoleView)
     + draw()
     + move(o: ICellObject, direction: Direction): Bool
-    + attack(o: ICellObject, direction: Direction, force: Int)
+    + interact(o: ICellObject, direction: Direction, force: Int)
     + special_attack(o: ICellObject, radius: Int, force: Int)
+    + add_object(o: ICellObject)
 }
 
 Map ..|> IMap
@@ -138,13 +142,13 @@ end note
 
 interface ICellObject {
     + get_position(): Position
-    + damage(force: Int)
+    + interact(force: Int)
     + is_dead(): Bool
 }
 
 interface IEnemy {
     + get_position(): Position
-    + damage(force: Int)
+    + interact(force: Int)
     + is_dead(): Bool
     + step()
 }
@@ -166,7 +170,7 @@ class Monster {
     + constructor(params: MonsterParams, position: Position, map: IMap)
     + get_position(): Position
     + step()
-    + damage(force: Int)
+    + interact(force: Int)
     + is_dead(): Bool
 }
 
@@ -178,7 +182,7 @@ class BossMonster {
     - position: Position
     - map: IMap
     - hero: Hero
-    + damage(force: Int)
+    + interact(force: Int)
     + is_dead(): Bool
 
     + constructor(params: MonsterParams, position: Position, map: IMap, hero: Hero)
@@ -198,6 +202,7 @@ class Certificate {
     - position: Optional<Position>
 
     + get_position(): Position
+    + interact(Int)
 }
 
 Certificate ..|> IThing
@@ -215,6 +220,7 @@ class IDCard {
     + get_position(): Position
     + calculate_force(): Int
     + calculate_radius(): Int
+    + interact(Int)
 }
 
 IDCard ..|> IThing
@@ -229,7 +235,7 @@ class SpecialThing {
 
 SpecialThing ..|> IThing
 
-class ISpecialThingLoader {
+class SpecialThingLoader {
     {static} + load_from(json: Json): SpecialThing
     {static} + save_to(t: SpecialThing): Json
 }
@@ -269,6 +275,8 @@ note right of Game::run_game
     while not has_won_totally():
         while not has_won() and not has_lost() and not is_stopped:
             tick()
+            if ... :
+                map.
             map.draw(console)
             ++ticks
         if is_stopped:
@@ -310,6 +318,7 @@ interface IConsoleView {
     + on_lost()
     + draw_passage(p: Passage)
     + draw_object(p: ICellObject)
+    + register_move(p: Position, d: Direction)
     + register_attack(p: Position, d: Direction)
     + register_special_attack(p: Position, radius: Int)
 }
@@ -363,7 +372,8 @@ class GlobalConfig {
     - boss_param_pool: MonsterParams[]
     - object_view: Map<Type, String>
     - boss_strategies: Map<String, Callable>
-    - boss_to_id_cards: Map<Type, List<IDCard>>
+    - boss_id_cards: List<IDCard>
+    - certificates: List<Certificate>
     - initial_thing_pool: List<SpecialThing>
 
     {static} + get_instance(): GlobalConfig
@@ -374,7 +384,8 @@ class GlobalConfig {
     + get_object_view(o: ICellObject): String
     + get_boss_strategies(): Iterator<String>
     + get_boss_strategy(name: String): Callable
-    + get_boss_prize(boss: BossMonster): Iterator<IDCard>
+    + get_boss_prizes(i: Int): IDCard
+    + get_certificate(i: Int): Certificate
     + get_special_thing(i: Int): SpecialThing
     - load()
 }
@@ -387,6 +398,7 @@ class Console {
     + on_lost()
     + draw_passage(p: Passage)
     + draw_object(o: ICellObject)
+    + register_move(p: Position, d: Direction)
     + register_attack(p: Position, d: Direction)
     + register_special_attack(p: Position, radius: Int)
 
