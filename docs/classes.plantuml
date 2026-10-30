@@ -93,7 +93,7 @@ class Map {
     - thing_count: Int
 
     {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[])
-    + draw()
+    + draw(console: IConsoleView)
 }
 
 Map ..|> IMap
@@ -192,7 +192,7 @@ class Game {
     - ticks: Int
     - hero: Hero
     - is_stopped: Bool
-    - console: IConsole
+    - console: IConsoleView
 
     {static} + create_new(level_generator: ILevelGenerator, event_queue: Queue<IEvent>, console: IConsole)
     {static} + create_from(section_passed: Int, level_generator: ILevelGenerator, map: Map, actors: IActor[], ticks: Int, hero: Hero, console: IConsole)
@@ -219,6 +219,7 @@ note right of Game::run_game
     while not has_won_totally():
         while not has_won() and not has_lost() and not is_stopped:
             tick()
+            map.draw(console)
             ++ticks
         if is_stopped:
             return
@@ -254,7 +255,12 @@ interface IActor {
     + step()
 }
 
-interface IConsoleView {}
+interface IConsoleView {
+    + on_won()
+    + on_lost()
+    + draw_passage(p: Passage)
+    + draw_object(p: ICellObject)
+}
 
 class Cell {
     + position: Position {readonly}
@@ -306,12 +312,14 @@ class GlobalConfig {
     - initial_hero_params: HeroParams
     - monster_param_pool: MonsterParams[]
     - boss_param_pool: MonsterParams[]
+    - object_view: Map<Type, String>
 
     {static} + get_instance(): GlobalConfig
     + get_map_size(): (Int, Int)
     + get_initial_hero_params(): HeroParams
     + get_monster_param_pool(): MonsterParams[]
     + get_boss_param_pool(): MonsterParams[]
+    + get_object_view(o: ICellObject): String
     - load()
 }
 
@@ -319,6 +327,10 @@ class Console {
     - game: Game
 
     + run()
+    + on_won()
+    + on_lost()
+    + draw_passage(p: Passage)
+    + draw_object(o: ICellObject)
 
     - show_start_menu()
     - run_new_game()
