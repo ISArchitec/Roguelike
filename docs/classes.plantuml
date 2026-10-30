@@ -93,7 +93,7 @@ class RandomLevelGenerator {
     - generate_enemy(): IEnemy
 }
 
-RandomSectionGenerator ..|> ISectionGenerator
+RandomLevelGenerator ..|> ILevelGenerator
 
 interface IMap {
     + move(o: ICellObject, direction: Direction): Bool
