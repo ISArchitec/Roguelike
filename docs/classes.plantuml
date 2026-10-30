@@ -204,8 +204,6 @@ interface IBossStrategy {
 
 BossMonster ..|> IEnemy
 
-interface IThing {}
-
 class Certificate {
     - position: Optional<Position>
 
@@ -213,7 +211,6 @@ class Certificate {
     + interact(Int)
 }
 
-Certificate ..|> IThing
 Certificate ..|> ICellObject
 
 class IDCard {
@@ -231,7 +228,6 @@ class IDCard {
     + interact(Int)
 }
 
-IDCard ..|> IThing
 IDCard ..|> ICellObject
 
 class SpecialThing {
@@ -240,8 +236,6 @@ class SpecialThing {
     + constructor(params: HeroParams)
     + apply(hero: Hero)
 }
-
-SpecialThing ..|> IThing
 
 class SpecialThingLoader {
     {static} + load_from(json: Json): SpecialThing
