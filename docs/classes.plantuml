@@ -22,8 +22,9 @@ class Hero {
     - currentCard: Optional<IDCard>
     - eventQueue: Queue<IEvent>
 
-    + constructor(params: HeroParams, position: Position)
+    + constructor(params: HeroParams, position: Position, reserve: ISpecialThing[], eventQueue: Queue<IEvent>)
     + get_position(): Position
+    + set_initial_position(p: Position)
     + step()
 }
 
@@ -62,7 +63,8 @@ class RandomLevelGenerator {
     {static} + create_new()
     {static} + create_from(level_in_section: Int)
 
-    + generate_level(section_number: Int): Map
+    + generate_level(section_number: Int, hero: Hero): Map
+    - generate_enemy(): IEnemy
 }
 
 RandomSectionGenerator ..|> ISectionGenerator
@@ -110,13 +112,40 @@ interface ICellObject {
     + get_position(): Position
 }
 
-interface IEnemy {}
+interface IEnemy {
+    + get_position(): Position
+    + step()
+}
 
-class Monster {}
+IEnemy ..|> IActor
+IEnemy ..|> ICellObject
+
+class MonsterParams {
+    + mental_health: Int {readonly}
+    + self_confidence: Int {readonly}
+}
+
+class Monster {
+    - mental_health: Int
+    - self_confidence: Int
+    - position: Position
+
+    + constructor(params: MonsterParams, position: Position)
+    + get_position(): Position
+    + step()
+}
 
 Monster ..|> IEnemy
 
-class BossMonster {}
+class BossMonster {
+    - mental_health: Int
+    - self_confidence: Int
+    - position: Position
+
+    + constructor(params: MonsterParams, position: Position)
+    + get_position(): Position
+    + step()
+}
 
 BossMonster ..|> IEnemy
 
@@ -239,10 +268,14 @@ class GlobalConfig {
     {static} - config: GlobalConfig
     - map_size: (Int, Int)
     - initial_hero_params: HeroParams
+    - monster_param_pool: MonsterParams[]
+    - boss_param_pool: MonsterParams[]
 
     {static} + get_instance(): GlobalConfig
     + get_map_size(): (Int, Int)
     + get_initial_hero_params(): HeroParams
+    + get_monster_param_pool(): MonsterParams[]
+    + get_boss_param_pool(): MonsterParams[]
     - load()
 }
 
