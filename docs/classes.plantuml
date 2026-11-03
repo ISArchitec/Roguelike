@@ -4,13 +4,6 @@ skinparam shadowing false
 
 title Диаграмма классов
 
-enum Direction {
-    DOWN
-    UP
-    LEFT
-    RIGHT
-}
-
 class HeroParams {
     + health: Int {readonly} 
     + defense: Int {readonly} 
@@ -96,6 +89,8 @@ interface IMap {
     + special_attack(o: ICellObject, radius: Int, force: Int)
 }
 
+package Map {
+
 class MapBuilder {
     - cells: Cell[]
     - width: Int
@@ -128,6 +123,50 @@ Map --> Cell
 Map --> Direction
 
 Map ..|> IMap
+
+enum Direction {
+    DOWN
+    UP
+    LEFT
+    RIGHT
+}
+
+class MapLoader {
+    {static} + load_from(json: Json): Map
+    {static} + save_to(game: Map): Json
+}
+
+MapLoader --> Map : (de)serialize
+
+class CellLoader {
+    {static} + load_from(json: Json): Cell
+    {static} + save_to(cell: Cell): Json
+}
+
+CellLoader --> Cell : (de)serialize
+
+class Position {
+    + x: Int {readonly}
+    + y: Int {readonly}
+
+    + constructor(x: Int, y: Int)
+    + move(d: Direction): Option<Position>
+}
+
+Cell --> Position
+
+note right of Position::constructor
+  position should be inside the map (check GlobalConfig)
+end note
+
+class PositionLoader {
+    {static} + load_from(json: Json): Position
+    {static} + save_to(p: Position): Json
+}
+
+PositionLoader --> Position : (de)serialize
+
+}
 
 interface ICellObject {
     + get_position(): Position
@@ -388,13 +427,6 @@ RandomLevelGeneratorLoader --> RandomLevelGenerator : (de)serialize
 
 }
 
-class MapLoader {
-    {static} + load_from(json: Json): Map
-    {static} + save_to(game: Map): Json
-}
-
-MapLoader --> Map : (de)serialize
-
 class IActorLoader {
     {static} + load_from(json: Json): IActor
     {static} + save_to(game: IActor): Json
@@ -423,40 +455,12 @@ class Cell {
     + empty(): Bool
 }
 
-class CellLoader {
-    {static} + load_from(json: Json): Cell
-    {static} + save_to(cell: Cell): Json
-}
-
-CellLoader --> Cell : (de)serialize
-
 class ICellObjectLoader {
     {static} + load_from(json: Json): ICellObject
     {static} + save_to(o: ICellObject): Json
 }
 
 ICellObjectLoader --> ICellObject : (de)serialize
-
-class Position {
-    + x: Int {readonly}
-    + y: Int {readonly}
-
-    + constructor(x: Int, y: Int)
-    + move(d: Direction): Option<Position>
-}
-
-Cell --> Position
-
-note right of Position::constructor
-  position should be inside the map (check GlobalConfig)
-end note
-
-class PositionLoader {
-    {static} + load_from(json: Json): Position
-    {static} + save_to(p: Position): Json
-}
-
-PositionLoader --> Position : (de)serialize
 
 package View {
 
