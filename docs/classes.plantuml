@@ -69,10 +69,6 @@ Hero --> OneTimeBonus
 Hero --> Certificate
 Hero --> IDCard
 
-interface IEvent {
-    + accept_hero(hero: Hero)
-}
-
 class MovingEvent {
     + accept_hero(hero: Hero)
 }
@@ -93,22 +89,6 @@ class OneTimeBonusEvent {
 }
 
 OneTimeBonusEvent ..|> IEvent
-
-interface ILevelGenerator {
-    + generate_level(section_number: Int): Map
-}
-
-class RandomLevelGenerator {
-    - level_in_section: Int
-
-    {static} + create_new()
-    {static} + create_from(level_in_section: Int)
-
-    + generate_level(section_number: Int, hero: Hero): Map
-    - generate_enemy(): IEnemy
-}
-
-RandomLevelGenerator ..|> ILevelGenerator
 
 interface IMap {
     + move(o: ICellObject, direction: Direction): Bool
@@ -267,6 +247,68 @@ class OneTimeBonusLoader {
 
 OneTimeBonusLoader --> OneTimeBonus : (de)serialize
 
+package Game {
+
+class GlobalConfig {
+    {static} - config: GlobalConfig
+    - map_size: (Int, Int)
+    - initial_hero_params: HeroParams
+    - monster_param_pool: MonsterParams[]
+    - boss_param_pool: MonsterParams[]
+    - object_view: Map<Type, String>
+    - boss_strategies: Map<String, Callable>
+    - boss_id_cards: List<IDCard>
+    - certificates: List<Certificate>
+    - initial_thing_pool: List<OneTimeBonus>
+
+    {static} + get_instance(): GlobalConfig
+    + get_map_size(): (Int, Int)
+    + get_initial_hero_params(): HeroParams
+    + get_monster_param_pool(): MonsterParams[]
+    + get_boss_param_pool(): MonsterParams[]
+    + get_object_view(o: ICellObject): String
+    + get_boss_strategies(): Iterator<String>
+    + get_boss_strategy(name: String): Callable
+    + get_boss_prizes(i: Int): IDCard
+    + get_certificate(i: Int): Certificate
+    + get_special_thing(i: Int): OneTimeBonus
+    - load()
+}
+
+interface IEvent {
+    + accept_hero(hero: Hero)
+}
+
+interface ILevelGenerator {
+    + generate_level(section_number: Int): Map
+}
+
+class RandomLevelGenerator {
+    - level_in_section: Int
+
+    {static} + create_new()
+    {static} + create_from(level_in_section: Int)
+
+    + generate_level(section_number: Int, hero: Hero): Map
+    - generate_enemy(): IEnemy
+}
+
+RandomLevelGenerator ..|> ILevelGenerator
+
+interface IModelSubscriber {
+    + on_won()
+    + on_lost()
+    + draw_passage(p: Position)
+    + draw_object(p: ICellObject)
+    + register_move(p: Position, d: Direction)
+    + register_attack(p: Position, d: Direction)
+    + register_special_attack(p: Position, radius: Int)
+    + show_things(ts: OneTimeBonus[])
+    + choose_from_cards(ics: IdCard[]): Int
+}
+
+Game --> IModelSubscriber
+
 class Game {
     - section_passed: Int
     - level_generator: ILevelGenerator
@@ -344,6 +386,8 @@ class RandomLevelGeneratorLoader {
 
 RandomLevelGeneratorLoader --> RandomLevelGenerator : (de)serialize
 
+}
+
 class MapLoader {
     {static} + load_from(json: Json): Map
     {static} + save_to(game: Map): Json
@@ -360,18 +404,6 @@ IActorLoader --> IActor : (de)serialize
 
 interface IActor {
     + step()
-}
-
-interface IModelSubscriber {
-    + on_won()
-    + on_lost()
-    + draw_passage(p: Position)
-    + draw_object(p: ICellObject)
-    + register_move(p: Position, d: Direction)
-    + register_attack(p: Position, d: Direction)
-    + register_special_attack(p: Position, radius: Int)
-    + show_things(ts: OneTimeBonus[])
-    + choose_from_cards(ics: IdCard[]): Int
 }
 
 class Cell {
@@ -426,31 +458,7 @@ class PositionLoader {
 
 PositionLoader --> Position : (de)serialize
 
-class GlobalConfig {
-    {static} - config: GlobalConfig
-    - map_size: (Int, Int)
-    - initial_hero_params: HeroParams
-    - monster_param_pool: MonsterParams[]
-    - boss_param_pool: MonsterParams[]
-    - object_view: Map<Type, String>
-    - boss_strategies: Map<String, Callable>
-    - boss_id_cards: List<IDCard>
-    - certificates: List<Certificate>
-    - initial_thing_pool: List<OneTimeBonus>
-
-    {static} + get_instance(): GlobalConfig
-    + get_map_size(): (Int, Int)
-    + get_initial_hero_params(): HeroParams
-    + get_monster_param_pool(): MonsterParams[]
-    + get_boss_param_pool(): MonsterParams[]
-    + get_object_view(o: ICellObject): String
-    + get_boss_strategies(): Iterator<String>
-    + get_boss_strategy(name: String): Callable
-    + get_boss_prizes(i: Int): IDCard
-    + get_certificate(i: Int): Certificate
-    + get_special_thing(i: Int): OneTimeBonus
-    - load()
-}
+package View {
 
 class Console {
     - game: Game
@@ -471,6 +479,8 @@ class Console {
     - start_event_handling()
     - show_win_screen()
     - show_lose_screen()
+}
+
 }
 
 Console --> Game
