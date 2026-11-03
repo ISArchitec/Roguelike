@@ -12,17 +12,14 @@ enum Direction {
 }
 
 class HeroParams {
-    + mental_health: Int {readonly} 
-    + inner_equilibrium: Int {readonly} 
-    + self_confidence: Int {readonly} 
-    + reaction: Int {readonly} 
+    + health: Int {readonly} 
+    + defense: Int {readonly} 
+    + attack: Int {readonly} 
+    + speed: Int {readonly} 
 }
 
 class Hero {
-    - mental_health: Int
-    - inner_equilibrium: Int
-    - self_confidence: Int
-    - reaction: Int
+    - params: HeroParams
     - position: Position
     - reserve: OneTimeBonus[]
     - id_pool: IDCard[]
@@ -164,13 +161,13 @@ IEnemy ..|> IActor
 IEnemy ..|> ICellObject
 
 class MonsterParams {
-    + mental_health: Int {readonly}
-    + self_confidence: Int {readonly}
+    + health: Int {readonly}
+    + attack: Int {readonly}
 }
 
 class Monster {
-    - mental_health: Int
-    - self_confidence: Int
+    - health: Int
+    - attack: Int
     - position: Position
     - map: IMap
 
@@ -184,8 +181,8 @@ class Monster {
 Monster ..|> IEnemy
 
 class BossMonster {
-    - mental_health: Int
-    - self_confidence: Int
+    - health: Int
+    - attack: Int
     - position: Position
     - map: IMap
     - hero: Hero
