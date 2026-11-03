@@ -4,6 +4,56 @@ skinparam shadowing false
 
 title Диаграмма классов
 
+package Hero {
+
+class Certificate {
+    - position: Optional<Position>
+    - params: HeroParams
+
+    + constructor(params: HeroParams)
+    + apply(hero: HeroParams): HeroParams
+
+    + get_position(): Position
+    + interact(Int)
+    + is_inactive(): Bool
+}
+
+Certificate ..|> ICellObject
+
+class IDCard {
+    - position: Optional<Position>
+    - tick_since: Int
+    - force: Int
+    - radius: Int
+    - timeout: Int
+    - tick_getter: Option<Callback<Int>>
+
+    + constructor(force: Int, radius: Int, timeout: Int, position: Position, tick_since: Int = 0)
+
+    + get_position(): Position
+    + calculate_force(): Int
+    + calculate_radius(): Int
+    + interact(Int)
+    + is_inactive(): Bool
+    + set_tick_getter(cb: Callback)
+}
+
+IDCard ..|> ICellObject
+
+class OneTimeBonus {
+    - modifier: HeroParams
+
+    + constructor(params: HeroParams)
+    + apply(hero: Hero)
+}
+
+class OneTimeBonusLoader {
+    {static} + load_from(json: Json): OneTimeBonus
+    {static} + save_to(t: OneTimeBonus): Json
+}
+
+OneTimeBonusLoader --> OneTimeBonus : (de)serialize
+
 class HeroParams {
     + health: Int {readonly} 
     + defense: Int {readonly} 
@@ -87,6 +137,8 @@ interface IMap {
     + move(o: ICellObject, direction: Direction): Bool
     + interact(o: ICellObject, direction: Direction, force: Int)
     + special_attack(o: ICellObject, radius: Int, force: Int)
+}
+
 }
 
 package Map {
@@ -174,6 +226,8 @@ interface ICellObject {
     + is_inactive(): Bool
 }
 
+package Monsters {
+
 interface IEnemy {
     + get_position(): Position
     + interact(force: Int)
@@ -237,54 +291,7 @@ interface IBossStrategy {
 }
 
 BossMonster ..|> IEnemy
-
-class Certificate {
-    - position: Optional<Position>
-    - params: HeroParams
-
-    + constructor(params: HeroParams)
-    + apply(hero: HeroParams): HeroParams
-
-    + get_position(): Position
-    + interact(Int)
-    + is_inactive(): Bool
 }
-
-Certificate ..|> ICellObject
-
-class IDCard {
-    - position: Optional<Position>
-    - tick_since: Int
-    - force: Int
-    - radius: Int
-    - timeout: Int
-    - tick_getter: Option<Callback<Int>>
-
-    + constructor(force: Int, radius: Int, timeout: Int, position: Position, tick_since: Int = 0)
-
-    + get_position(): Position
-    + calculate_force(): Int
-    + calculate_radius(): Int
-    + interact(Int)
-    + is_inactive(): Bool
-    + set_tick_getter(cb: Callback)
-}
-
-IDCard ..|> ICellObject
-
-class OneTimeBonus {
-    - modifier: HeroParams
-
-    + constructor(params: HeroParams)
-    + apply(hero: Hero)
-}
-
-class OneTimeBonusLoader {
-    {static} + load_from(json: Json): OneTimeBonus
-    {static} + save_to(t: OneTimeBonus): Json
-}
-
-OneTimeBonusLoader --> OneTimeBonus : (de)serialize
 
 package Game {
 
