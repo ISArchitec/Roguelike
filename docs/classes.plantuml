@@ -113,10 +113,10 @@ class Map {
     - cells: Cell[]
     - width: Int
     - height: Int
-    - console: IConsoleView
+    - console: IModelSubscriber
     - on_terminate_object: Callback
 
-    {static} + create_from(width: Int, height: Int, cells: Cell[], console: IConsoleView, on_terminate_object: Callback)
+    {static} + create_from(width: Int, height: Int, cells: Cell[], console: IModelSubscriber, on_terminate_object: Callback)
     + draw()
     + move(o: ICellObject, direction: Direction): Bool
     + interact(o: ICellObject, direction: Direction, force: Int)
@@ -238,10 +238,10 @@ class Game {
     - thing_got: Int
     - hero: Hero
     - is_stopped: Bool
-    - console: IConsoleView
+    - console: IModelSubscriber
 
-    {static} + create_new(level_generator: ILevelGenerator, event_queue: Queue<IEvent>, console: IConsoleView)
-    {static} + create_from(section_passed: Int, level_generator: ILevelGenerator, map: Map, actors: IActor[], ticks: Int, hero: Hero, console: IConsoleView)
+    {static} + create_new(level_generator: ILevelGenerator, event_queue: Queue<IEvent>, console: IModelSubscriber)
+    {static} + create_from(section_passed: Int, level_generator: ILevelGenerator, map: Map, actors: IActor[], ticks: Int, hero: Hero, console: IModelSubscriber)
     + run_game()
     + has_won_level(): Bool
     + has_lost_level(): Bool
@@ -282,7 +282,7 @@ note right of Game::run_game
 end note
 
 class GameLoader {
-    {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IConsoleView): Game
+    {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
     {static} + save_to(game: Game): Json
 }
 
@@ -305,7 +305,7 @@ interface IActor {
     + step()
 }
 
-interface IConsoleView {
+interface IModelSubscriber {
     + on_won()
     + on_lost()
     + draw_passage(p: Position)
@@ -408,7 +408,7 @@ class Console {
     - show_lose_screen()
 }
 
-Console ..|> IConsoleView
+Console ..|> IModelSubscriber
 
 
 
