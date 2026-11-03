@@ -99,26 +99,24 @@ interface IMap {
 }
 
 class MapBuilder {
-    - passages: Passage[]
     - cells: Cell[]
     - width: Int
     - height: Int
 
     {static} + new(width: Int, height: Int)
     + add_object(o: ICellObject)
-    + add_passage(p: Passage)
+    + add_passage(p: Position)
     + to_map(): Map
 }
 
 class Map {
-    - passages: Passage[]
     - cells: Cell[]
     - width: Int
     - height: Int
     - console: IConsoleView
     - on_terminate_object: Callback
 
-    {static} + create_from(width: Int, height: Int, cells: Cell[], passages: Passage[], console: IConsoleView, on_terminate_object: Callback)
+    {static} + create_from(width: Int, height: Int, cells: Cell[], console: IConsoleView, on_terminate_object: Callback)
     + draw()
     + move(o: ICellObject, direction: Direction): Bool
     + interact(o: ICellObject, direction: Direction, force: Int)
@@ -127,22 +125,6 @@ class Map {
 }
 
 Map ..|> IMap
-
-class Passage {
-    + first: Position {readonly}
-    + second: Position {readonly}
-
-    + constructor(first: Position, second: Position)
-}
-
-class PassageLoader {
-    {static} + load_from(json: Json): Passage
-    {static} + save_to(p: Passage): Json
-}
-
-note right of Passage::constructor
-  only direct Passage is permitted
-end note
 
 interface ICellObject {
     + get_position(): Position
@@ -326,7 +308,7 @@ interface IActor {
 interface IConsoleView {
     + on_won()
     + on_lost()
-    + draw_passage(p: Passage)
+    + draw_passage(p: Position)
     + draw_object(p: ICellObject)
     + register_move(p: Position, d: Direction)
     + register_attack(p: Position, d: Direction)
@@ -337,15 +319,18 @@ interface IConsoleView {
 
 class Cell {
     + position: Position {readonly}
-    - objects: Set<ICellObject>
+    - object: ICellObject
+    - is_wall: Bool
 
     {static} + create_new(p: Position)
-    {static} + create_from(p: Position, objects: ICellObject[])
+    {static} + create_from(p: Position, object: ICellObject, is_wall: Bool)
 
-    + add_cell_object(o: ICellObject)
+    + add_cell_object(o: ICellObject): Bool
     + remove_cell_object(o: ICellObject)
     + check_in(o: ICellObject): Bool
-    + iterate(): Iterator<ICellObject>
+    + get_object(): ICellObject
+    + make_wall()
+    + is_wall(): Bool
     + empty(): Bool
 }
 
