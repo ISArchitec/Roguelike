@@ -4,7 +4,90 @@ skinparam shadowing false
 
 title Диаграмма классов
 
-package Hero {
+package game {
+
+interface IModelSubscriber {
+    + on_won()
+    + on_lost()
+    + draw_passage(p: Position)
+    + draw_object(p: ICellObject)
+    + register_move(p: Position, d: Direction)
+    + register_attack(p: Position, d: Direction)
+    + register_special_attack(p: Position, radius: Int)
+    + show_things(ts: OneTimeBonus[])
+    + choose_from_cards(ics: IdCard[]): Int
+}
+
+interface IEvent {
+    + accept_hero(hero: Hero)
+}
+
+interface ILevelGenerator {
+    + generate_level(section_number: Int): Map
+}
+
+class IActorLoader {
+    {static} + load_from(json: Json): IActor
+    {static} + save_to(game: IActor): Json
+}
+
+IActorLoader --> IActor : (de)serialize
+
+interface IActor {
+    + step()
+}
+}
+
+package positioning {
+
+interface ICellObject {
+    + get_position(): Position
+    + interact(force: Int)
+    + is_inactive(): Bool
+}
+
+class ICellObjectLoader {
+    {static} + load_from(json: Json): ICellObject
+    {static} + save_to(o: ICellObject): Json
+}
+
+ICellObjectLoader --> ICellObject : (de)serialize
+
+class Position {
+    + x: Int {readonly}
+    + y: Int {readonly}
+
+    + constructor(x: Int, y: Int)
+    + move(d: Direction): Option<Position>
+}
+
+note right of Position::constructor
+  position should be inside the map (check GlobalConfig)
+end note
+
+class PositionLoader {
+    {static} + load_from(json: Json): Position
+    {static} + save_to(p: Position): Json
+}
+
+PositionLoader --> Position : (de)serialize
+
+enum Direction {
+    DOWN
+    UP
+    LEFT
+    RIGHT
+}
+
+interface IMap {
+    + move(o: ICellObject, direction: Direction): Bool
+    + interact(o: ICellObject, direction: Direction, force: Int)
+    + special_attack(o: ICellObject, radius: Int, force: Int)
+}
+
+}
+
+package hero {
 
 class Certificate {
     - position: Optional<Position>
@@ -92,8 +175,6 @@ class Hero {
 Hero *-- HeroParams
 
 Hero --> IMap
-Monster --> IMap
-BossMonster --> IMap
 
 note right of Hero::step
   <code>
@@ -133,15 +214,9 @@ class OneTimeBonusEvent {
 
 OneTimeBonusEvent ..|> IEvent
 
-interface IMap {
-    + move(o: ICellObject, direction: Direction): Bool
-    + interact(o: ICellObject, direction: Direction, force: Int)
-    + special_attack(o: ICellObject, radius: Int, force: Int)
 }
 
-}
-
-package Map {
+package map {
 
 class MapBuilder {
     - cells: Cell[]
@@ -176,11 +251,21 @@ Map --> Direction
 
 Map ..|> IMap
 
-enum Direction {
-    DOWN
-    UP
-    LEFT
-    RIGHT
+class Cell {
+    + position: Position {readonly}
+    - object: ICellObject
+    - is_wall: Bool
+
+    {static} + create_new(p: Position)
+    {static} + create_from(p: Position, object: ICellObject, is_wall: Bool)
+
+    + add_cell_object(o: ICellObject): Bool
+    + remove_cell_object(o: ICellObject)
+    + check_in(o: ICellObject): Bool
+    + get_object(): ICellObject
+    + make_wall()
+    + is_wall(): Bool
+    + empty(): Bool
 }
 
 class MapLoader {
@@ -197,36 +282,11 @@ class CellLoader {
 
 CellLoader --> Cell : (de)serialize
 
-class Position {
-    + x: Int {readonly}
-    + y: Int {readonly}
-
-    + constructor(x: Int, y: Int)
-    + move(d: Direction): Option<Position>
-}
-
 Cell --> Position
 
-note right of Position::constructor
-  position should be inside the map (check GlobalConfig)
-end note
-
-class PositionLoader {
-    {static} + load_from(json: Json): Position
-    {static} + save_to(p: Position): Json
 }
 
-PositionLoader --> Position : (de)serialize
-
-}
-
-interface ICellObject {
-    + get_position(): Position
-    + interact(force: Int)
-    + is_inactive(): Bool
-}
-
-package Monsters {
+package monsters {
 
 interface IEnemy {
     + get_position(): Position
@@ -243,8 +303,6 @@ class MonsterParams {
     + attack: Int {readonly}
 }
 
-Monster *-- MonsterParams
-
 class Monster {
     - health: Int
     - attack: Int
@@ -258,7 +316,10 @@ class Monster {
     + is_inactive(): Bool
 }
 
+Monster *-- MonsterParams
 Monster ..|> IEnemy
+Monster --> IMap
+BossMonster --> IMap
 
 class BossMonster {
     - health: Int
@@ -293,7 +354,7 @@ interface IBossStrategy {
 BossMonster ..|> IEnemy
 }
 
-package Game {
+package play_cycle {
 
 class GlobalConfig {
     {static} - config: GlobalConfig
@@ -321,14 +382,6 @@ class GlobalConfig {
     - load()
 }
 
-interface IEvent {
-    + accept_hero(hero: Hero)
-}
-
-interface ILevelGenerator {
-    + generate_level(section_number: Int): Map
-}
-
 class RandomLevelGenerator {
     - level_in_section: Int
 
@@ -340,20 +393,6 @@ class RandomLevelGenerator {
 }
 
 RandomLevelGenerator ..|> ILevelGenerator
-
-interface IModelSubscriber {
-    + on_won()
-    + on_lost()
-    + draw_passage(p: Position)
-    + draw_object(p: ICellObject)
-    + register_move(p: Position, d: Direction)
-    + register_attack(p: Position, d: Direction)
-    + register_special_attack(p: Position, radius: Int)
-    + show_things(ts: OneTimeBonus[])
-    + choose_from_cards(ics: IdCard[]): Int
-}
-
-Game --> IModelSubscriber
 
 class Game {
     - section_passed: Int
@@ -431,45 +470,9 @@ class RandomLevelGeneratorLoader {
 }
 
 RandomLevelGeneratorLoader --> RandomLevelGenerator : (de)serialize
-
 }
 
-class IActorLoader {
-    {static} + load_from(json: Json): IActor
-    {static} + save_to(game: IActor): Json
-}
-
-IActorLoader --> IActor : (de)serialize
-
-interface IActor {
-    + step()
-}
-
-class Cell {
-    + position: Position {readonly}
-    - object: ICellObject
-    - is_wall: Bool
-
-    {static} + create_new(p: Position)
-    {static} + create_from(p: Position, object: ICellObject, is_wall: Bool)
-
-    + add_cell_object(o: ICellObject): Bool
-    + remove_cell_object(o: ICellObject)
-    + check_in(o: ICellObject): Bool
-    + get_object(): ICellObject
-    + make_wall()
-    + is_wall(): Bool
-    + empty(): Bool
-}
-
-class ICellObjectLoader {
-    {static} + load_from(json: Json): ICellObject
-    {static} + save_to(o: ICellObject): Json
-}
-
-ICellObjectLoader --> ICellObject : (de)serialize
-
-package View {
+package view {
 
 class Console {
     - game: Game
