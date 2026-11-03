@@ -27,7 +27,6 @@ class Hero {
     - currentCard: Optional<IDCard>
     - eventQueue: Queue<IEvent>
     - map: IMap
-
     {static} + create_new(params: HeroParams, position: Position, reserve: OneTimeBonus[], eventQueue: Queue<IEvent>, map: IMap)
     {static} + create_from(params: HeroParams, position: Position, reserve: OneTimeBonus[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap, certificates: List<Certificate>)
     + get_position(): Position
@@ -40,7 +39,6 @@ class Hero {
     + get_id_cards(): Iterator<IdCard>
     + has_current_id_card(): Bool
     + use_id_card(index: Int)
-
     + interact(force: Int)
     + apply_modifiers(params: HeroParams)
     + is_inactive(): Bool
@@ -48,8 +46,28 @@ class Hero {
     + add_certificate(certificate: Certificate)
 }
 
+Hero *-- HeroParams
+
+Hero --> IMap
+Monster --> IMap
+BossMonster --> IMap
+
+note right of Hero::step
+  <code>
+  tick():
+    for i <- 1..params.speed:
+        event = eventQueue.pop()
+        event.accept_hero(this)
+  </code>
+end note
+
 Hero ..|> IActor
 Hero ..|> ICellObject
+
+Hero --> IEvent
+Hero --> OneTimeBonus
+Hero --> Certificate
+Hero --> IDCard
 
 interface IEvent {
     + accept_hero(hero: Hero)
@@ -67,14 +85,14 @@ class SpecialAttackEvent {
 
 SpecialAttackEvent ..|> IEvent
 
-class SpecialThingEvent {
+class OneTimeBonusEvent {
     - index: Int
 
     + constructor(index: Int)
     + accept_hero(hero: Hero)
 }
 
-SpecialThingEvent ..|> IEvent
+OneTimeBonusEvent ..|> IEvent
 
 interface ILevelGenerator {
     + generate_level(section_number: Int): Map
@@ -109,6 +127,8 @@ class MapBuilder {
     + to_map(): Map
 }
 
+MapBuilder --> Map : creates
+
 class Map {
     - cells: Cell[]
     - width: Int
@@ -123,6 +143,9 @@ class Map {
     + special_attack(o: ICellObject, radius: Int, force: Int)
     + add_object(o: ICellObject)
 }
+
+Map --> Cell
+Map --> Direction
 
 Map ..|> IMap
 
@@ -147,6 +170,8 @@ class MonsterParams {
     + attack: Int {readonly}
 }
 
+Monster *-- MonsterParams
+
 class Monster {
     - health: Int
     - attack: Int
@@ -168,13 +193,25 @@ class BossMonster {
     - position: Position
     - map: IMap
     - hero: Hero
+    - strategy: IBossStrategy
     + interact(force: Int)
     + is_inactive(): Bool
+    + try_move(): Bool
 
-    + constructor(params: MonsterParams, position: Position, map: IMap, hero: Hero)
+    + constructor(params: MonsterParams, position: Position, map: IMap, hero: Hero, strategyL IBossStrategy)
     + get_position(): Position
     + step()
 }
+
+note right of BossMonster::step
+  <code>
+  step():
+    action = strategy.get_action(hero, this)
+    action(this)
+  </code>
+end note
+
+BossMonster --> IBossStrategy
 
 interface IBossStrategy {
     + get_action(hero: Hero, boss: BossMonster): Callable
@@ -223,10 +260,12 @@ class OneTimeBonus {
     + apply(hero: Hero)
 }
 
-class SpecialThingLoader {
+class OneTimeBonusLoader {
     {static} + load_from(json: Json): OneTimeBonus
     {static} + save_to(t: OneTimeBonus): Json
 }
+
+OneTimeBonusLoader --> OneTimeBonus : (de)serialize
 
 class Game {
     - section_passed: Int
@@ -265,10 +304,10 @@ note right of Game::run_game
   <code>
   run_game():
     while not has_won_totally():
-        while not has_won() and not has_lost() and not is_stopped:
+        while not has_won_level() and not has_lost_level() and not is_stopped:
             tick()
-            if ... :
-                map.
+            if enemy_count == 0 :
+                map.add_object(...)
             map.draw(console)
             ++ticks
         if is_stopped:
@@ -281,25 +320,43 @@ note right of Game::run_game
   </code>
 end note
 
+note right of Game::count_down_on_terminate
+    Pass to Map constructor to count enemy and things statistics
+end note
+
+Game --> IActor
+Game --> Map
+Game --> ILevelGenerator
+Game --> IModelSubscriber
+Game --> Hero
+
 class GameLoader {
     {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
     {static} + save_to(game: Game): Json
 }
+
+GameLoader --> Game : (de)serialize
 
 class RandomLevelGeneratorLoader {
     {static} + load_from(json: Json): ILevelGenerator
     {static} + save_to(g: ILevelGenerator): Json
 }
 
+RandomLevelGeneratorLoader --> RandomLevelGenerator : (de)serialize
+
 class MapLoader {
     {static} + load_from(json: Json): Map
     {static} + save_to(game: Map): Json
 }
 
+MapLoader --> Map : (de)serialize
+
 class IActorLoader {
     {static} + load_from(json: Json): IActor
     {static} + save_to(game: IActor): Json
 }
+
+IActorLoader --> IActor : (de)serialize
 
 interface IActor {
     + step()
@@ -339,10 +396,14 @@ class CellLoader {
     {static} + save_to(cell: Cell): Json
 }
 
+CellLoader --> Cell : (de)serialize
+
 class ICellObjectLoader {
     {static} + load_from(json: Json): ICellObject
     {static} + save_to(o: ICellObject): Json
 }
+
+ICellObjectLoader --> ICellObject : (de)serialize
 
 class Position {
     + x: Int {readonly}
@@ -352,6 +413,8 @@ class Position {
     + move(d: Direction): Option<Position>
 }
 
+Cell --> Position
+
 note right of Position::constructor
   position should be inside the map (check GlobalConfig)
 end note
@@ -360,6 +423,8 @@ class PositionLoader {
     {static} + load_from(json: Json): Position
     {static} + save_to(p: Position): Json
 }
+
+PositionLoader --> Position : (de)serialize
 
 class GlobalConfig {
     {static} - config: GlobalConfig
@@ -408,6 +473,7 @@ class Console {
     - show_lose_screen()
 }
 
+Console --> Game
 Console ..|> IModelSubscriber
 
 
