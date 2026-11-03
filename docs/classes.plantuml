@@ -24,22 +24,22 @@ class Hero {
     - self_confidence: Int
     - reaction: Int
     - position: Position
-    - reserve: SpecialThing[]
+    - reserve: OneTimeBonus[]
     - id_pool: IDCard[]
     - certificates: List<Certificate>
     - currentCard: Optional<IDCard>
     - eventQueue: Queue<IEvent>
     - map: IMap
 
-    {static} + create_new(params: HeroParams, position: Position, reserve: SpecialThing[], eventQueue: Queue<IEvent>, map: IMap)
-    {static} + create_from(params: HeroParams, position: Position, reserve: SpecialThing[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap, certificates: List<Certificate>)
+    {static} + create_new(params: HeroParams, position: Position, reserve: OneTimeBonus[], eventQueue: Queue<IEvent>, map: IMap)
+    {static} + create_from(params: HeroParams, position: Position, reserve: OneTimeBonus[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap, certificates: List<Certificate>)
     + get_position(): Position
     + set_initial_position(p: Position)
     + step()
     + try_move(d: Direction)
     + special_attack()
     + use_thing(index: Int)
-    + get_things(): Iterator<SpecialThing>
+    + get_things(): Iterator<OneTimeBonus>
     + get_id_cards(): Iterator<IdCard>
     + has_current_id_card(): Bool
     + use_id_card(index: Int)
@@ -237,7 +237,7 @@ class IDCard {
 
 IDCard ..|> ICellObject
 
-class SpecialThing {
+class OneTimeBonus {
     - modifier: HeroParams
 
     + constructor(params: HeroParams)
@@ -245,8 +245,8 @@ class SpecialThing {
 }
 
 class SpecialThingLoader {
-    {static} + load_from(json: Json): SpecialThing
-    {static} + save_to(t: SpecialThing): Json
+    {static} + load_from(json: Json): OneTimeBonus
+    {static} + save_to(t: OneTimeBonus): Json
 }
 
 class Game {
@@ -334,7 +334,7 @@ interface IConsoleView {
     + register_move(p: Position, d: Direction)
     + register_attack(p: Position, d: Direction)
     + register_special_attack(p: Position, radius: Int)
-    + show_things(ts: SpecialThing[])
+    + show_things(ts: OneTimeBonus[])
     + choose_from_cards(ics: IdCard[]): Int
 }
 
@@ -389,7 +389,7 @@ class GlobalConfig {
     - boss_strategies: Map<String, Callable>
     - boss_id_cards: List<IDCard>
     - certificates: List<Certificate>
-    - initial_thing_pool: List<SpecialThing>
+    - initial_thing_pool: List<OneTimeBonus>
 
     {static} + get_instance(): GlobalConfig
     + get_map_size(): (Int, Int)
@@ -401,7 +401,7 @@ class GlobalConfig {
     + get_boss_strategy(name: String): Callable
     + get_boss_prizes(i: Int): IDCard
     + get_certificate(i: Int): Certificate
-    + get_special_thing(i: Int): SpecialThing
+    + get_special_thing(i: Int): OneTimeBonus
     - load()
 }
 
