@@ -4,6 +4,26 @@ skinparam shadowing false
 
 title Диаграмма классов
 
+package generation {
+
+interface ILevelGenerator {
+    + generate_level(section_number: Int): Map
+}
+
+class RandomLevelGenerator {
+    - level_in_section: Int
+
+    {static} + create_new()
+    {static} + create_from(level_in_section: Int)
+
+    + generate_level(section_number: Int, hero: Hero): Map
+    - generate_enemy(): IEnemy
+}
+
+RandomLevelGenerator ..|> ILevelGenerator
+
+}
+
 package game {
 
 interface IModelSubscriber {
@@ -20,10 +40,6 @@ interface IModelSubscriber {
 
 interface IEvent {
     + accept_hero(hero: Hero)
-}
-
-interface ILevelGenerator {
-    + generate_level(section_number: Int): Map
 }
 
 interface IActor {
@@ -333,18 +349,6 @@ class GlobalConfig {
     - load()
 }
 
-class RandomLevelGenerator {
-    - level_in_section: Int
-
-    {static} + create_new()
-    {static} + create_from(level_in_section: Int)
-
-    + generate_level(section_number: Int, hero: Hero): Map
-    - generate_enemy(): IEnemy
-}
-
-RandomLevelGenerator ..|> ILevelGenerator
-
 class Game {
     - section_passed: Int
     - level_generator: ILevelGenerator
@@ -496,7 +500,7 @@ class RandomLevelGeneratorLoader {
     {static} + save_to(g: ILevelGenerator): Json
 }
 
-RandomLevelGeneratorLoader --> play_cycle.RandomLevelGenerator : (de)serialize
+RandomLevelGeneratorLoader --> generation.RandomLevelGenerator : (de)serialize
 
 }
 
