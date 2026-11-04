@@ -89,7 +89,7 @@ interface IMap {
 
 }
 
-package hero {
+package hero_bonuses {
 
 class Certificate {
     - position: Optional<Position>
@@ -129,16 +129,17 @@ class OneTimeBonus {
     - modifier: ActorParams
 
     + constructor(params: ActorParams)
-    + apply(hero: Hero)
+    + get_modifier(): ActorParams
 }
+
+}
+
+package hero {
 
 class Hero {
     - params: ActorParams
     - position: Position
-    - reserve: OneTimeBonus[]
-    - id_pool: IDCard[]
-    - certificates: List<Certificate>
-    - currentCard: Optional<IDCard>
+    - inventory: HeroInventory
     - eventQueue: Queue<IEvent>
     - map: IMap
     {static} + create_new(params: ActorParams, position: Position, reserve: OneTimeBonus[], eventQueue: Queue<IEvent>, map: IMap)
@@ -152,6 +153,7 @@ class Hero {
     + get_things(): Iterator<OneTimeBonus>
     + get_id_cards(): Iterator<IdCard>
     + has_current_id_card(): Bool
+    + reset_id_card()
     + use_id_card(index: Int)
     + interact(force: Int)
     + apply_modifiers(params: ActorParams)
@@ -160,7 +162,25 @@ class Hero {
     + add_certificate(certificate: Certificate)
 }
 
+class HeroInventory {
+    - reserve: OneTimeBonus[]
+    - id_pool: IDCard[]
+    - certificates: List<Certificate>
+    - currentCard: Optional<IDCard>
+
+    + get_things(): Iterator<OneTimeBonus>
+    + get_id_cards(): Iterator<IdCard>
+    + has_current_id_card(): Bool
+    + reset_id_card()
+    + use_id_card(index: Int)
+    + add_id_card(card: IDCard)
+    + add_certificate(certificate: Certificate)
+    + use_thing(index: Int)
+}
+
 Hero *-- ActorParams
+
+Hero *-- HeroInventory
 
 Hero --> IMap
 
@@ -177,9 +197,9 @@ Hero ..|> IActor
 Hero ..|> ICellObject
 
 Hero --> IEvent
-Hero --> OneTimeBonus
-Hero --> Certificate
-Hero --> IDCard
+HeroInventory --> hero_bonuses.OneTimeBonus
+HeroInventory --> hero_bonuses.Certificate
+HeroInventory --> hero_bonuses.IDCard
 
 class MovingEvent {
     + accept_hero(hero: Hero)
@@ -422,7 +442,7 @@ class Console {
     + run()
     + on_won()
     + on_lost()
-    + draw_passage(p: Passage)
+    + draw_passage(p: Position)
     + draw_object(o: ICellObject)
     + register_move(p: Position, d: Direction)
     + register_attack(p: Position, d: Direction)
@@ -472,7 +492,7 @@ class OneTimeBonusLoader {
     {static} + save_to(t: OneTimeBonus): Json
 }
 
-OneTimeBonusLoader --> hero.OneTimeBonus : (de)serialize
+OneTimeBonusLoader --> hero_bonuses.OneTimeBonus : (de)serialize
 
 class MapLoader {
     {static} + load_from(json: Json): Map
