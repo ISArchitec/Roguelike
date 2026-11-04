@@ -26,13 +26,6 @@ interface ILevelGenerator {
     + generate_level(section_number: Int): Map
 }
 
-class IActorLoader {
-    {static} + load_from(json: Json): IActor
-    {static} + save_to(game: IActor): Json
-}
-
-IActorLoader --> IActor : (de)serialize
-
 interface IActor {
     + step()
 }
@@ -46,13 +39,6 @@ interface ICellObject {
     + is_inactive(): Bool
 }
 
-class ICellObjectLoader {
-    {static} + load_from(json: Json): ICellObject
-    {static} + save_to(o: ICellObject): Json
-}
-
-ICellObjectLoader --> ICellObject : (de)serialize
-
 class Position {
     + x: Int {readonly}
     + y: Int {readonly}
@@ -64,13 +50,6 @@ class Position {
 note right of Position::constructor
   position should be inside the map (check GlobalConfig)
 end note
-
-class PositionLoader {
-    {static} + load_from(json: Json): Position
-    {static} + save_to(p: Position): Json
-}
-
-PositionLoader --> Position : (de)serialize
 
 enum Direction {
     DOWN
@@ -129,13 +108,6 @@ class OneTimeBonus {
     + constructor(params: HeroParams)
     + apply(hero: Hero)
 }
-
-class OneTimeBonusLoader {
-    {static} + load_from(json: Json): OneTimeBonus
-    {static} + save_to(t: OneTimeBonus): Json
-}
-
-OneTimeBonusLoader --> OneTimeBonus : (de)serialize
 
 class HeroParams {
     + health: Int {readonly} 
@@ -267,20 +239,6 @@ class Cell {
     + is_wall(): Bool
     + empty(): Bool
 }
-
-class MapLoader {
-    {static} + load_from(json: Json): Map
-    {static} + save_to(game: Map): Json
-}
-
-MapLoader --> Map : (de)serialize
-
-class CellLoader {
-    {static} + load_from(json: Json): Cell
-    {static} + save_to(cell: Cell): Json
-}
-
-CellLoader --> Cell : (de)serialize
 
 Cell --> Position
 
@@ -457,19 +415,6 @@ Game --> ILevelGenerator
 Game --> IModelSubscriber
 Game --> Hero
 
-class GameLoader {
-    {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
-    {static} + save_to(game: Game): Json
-}
-
-GameLoader --> Game : (de)serialize
-
-class RandomLevelGeneratorLoader {
-    {static} + load_from(json: Json): ILevelGenerator
-    {static} + save_to(g: ILevelGenerator): Json
-}
-
-RandomLevelGeneratorLoader --> RandomLevelGenerator : (de)serialize
 }
 
 package view {
@@ -500,6 +445,66 @@ class Console {
 Console --> Game
 Console ..|> IModelSubscriber
 
+package serializing {
 
+Console --> GameLoader
+
+class IActorLoader {
+    {static} + load_from(json: Json): IActor
+    {static} + save_to(game: IActor): Json
+}
+
+IActorLoader --> game.IActor : (de)serialize
+
+class ICellObjectLoader {
+    {static} + load_from(json: Json): ICellObject
+    {static} + save_to(o: ICellObject): Json
+}
+
+ICellObjectLoader --> positioning.ICellObject : (de)serialize
+
+class PositionLoader {
+    {static} + load_from(json: Json): Position
+    {static} + save_to(p: Position): Json
+}
+
+PositionLoader --> positioning.Position : (de)serialize
+
+class OneTimeBonusLoader {
+    {static} + load_from(json: Json): OneTimeBonus
+    {static} + save_to(t: OneTimeBonus): Json
+}
+
+OneTimeBonusLoader --> hero.OneTimeBonus : (de)serialize
+
+class MapLoader {
+    {static} + load_from(json: Json): Map
+    {static} + save_to(game: Map): Json
+}
+
+MapLoader --> map.Map : (de)serialize
+
+class CellLoader {
+    {static} + load_from(json: Json): Cell
+    {static} + save_to(cell: Cell): Json
+}
+
+CellLoader --> map.Cell : (de)serialize
+
+class GameLoader {
+    {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
+    {static} + save_to(game: Game): Json
+}
+
+GameLoader --> play_cycle.Game : (de)serialize
+
+class RandomLevelGeneratorLoader {
+    {static} + load_from(json: Json): ILevelGenerator
+    {static} + save_to(g: ILevelGenerator): Json
+}
+
+RandomLevelGeneratorLoader --> play_cycle.RandomLevelGenerator : (de)serialize
+
+}
 
 @enduml
