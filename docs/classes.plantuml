@@ -29,6 +29,13 @@ interface ILevelGenerator {
 interface IActor {
     + step()
 }
+
+class ActorParams {
+    + health: Int {readonly}
+    + defense: Int {readonly}
+    + attack: Int {readonly}
+    + speed: Int {readonly}
+}
 }
 
 package positioning {
@@ -70,10 +77,10 @@ package hero {
 
 class Certificate {
     - position: Optional<Position>
-    - params: HeroParams
+    - params: ActorParams
 
-    + constructor(params: HeroParams)
-    + apply(hero: HeroParams): HeroParams
+    + constructor(params: ActorParams)
+    + apply(hero: ActorParams): ActorParams
 
     + get_position(): Position
     + interact(Int)
@@ -103,21 +110,14 @@ class IDCard {
 IDCard ..|> ICellObject
 
 class OneTimeBonus {
-    - modifier: HeroParams
+    - modifier: ActorParams
 
-    + constructor(params: HeroParams)
+    + constructor(params: ActorParams)
     + apply(hero: Hero)
 }
 
-class HeroParams {
-    + health: Int {readonly} 
-    + defense: Int {readonly} 
-    + attack: Int {readonly} 
-    + speed: Int {readonly} 
-}
-
 class Hero {
-    - params: HeroParams
+    - params: ActorParams
     - position: Position
     - reserve: OneTimeBonus[]
     - id_pool: IDCard[]
@@ -125,8 +125,8 @@ class Hero {
     - currentCard: Optional<IDCard>
     - eventQueue: Queue<IEvent>
     - map: IMap
-    {static} + create_new(params: HeroParams, position: Position, reserve: OneTimeBonus[], eventQueue: Queue<IEvent>, map: IMap)
-    {static} + create_from(params: HeroParams, position: Position, reserve: OneTimeBonus[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap, certificates: List<Certificate>)
+    {static} + create_new(params: ActorParams, position: Position, reserve: OneTimeBonus[], eventQueue: Queue<IEvent>, map: IMap)
+    {static} + create_from(params: ActorParams, position: Position, reserve: OneTimeBonus[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap, certificates: List<Certificate>)
     + get_position(): Position
     + set_initial_position(p: Position)
     + step()
@@ -138,13 +138,13 @@ class Hero {
     + has_current_id_card(): Bool
     + use_id_card(index: Int)
     + interact(force: Int)
-    + apply_modifiers(params: HeroParams)
+    + apply_modifiers(params: ActorParams)
     + is_inactive(): Bool
     + add_id_card(card: IDCard)
     + add_certificate(certificate: Certificate)
 }
 
-Hero *-- HeroParams
+Hero *-- ActorParams
 
 Hero --> IMap
 
@@ -256,32 +256,25 @@ interface IEnemy {
 IEnemy ..|> IActor
 IEnemy ..|> ICellObject
 
-class MonsterParams {
-    + health: Int {readonly}
-    + attack: Int {readonly}
-}
-
 class Monster {
-    - health: Int
-    - attack: Int
+    - params: ActorParams
     - position: Position
     - map: IMap
 
-    + constructor(params: MonsterParams, position: Position, map: IMap)
+    + constructor(params: ActorParams, position: Position, map: IMap)
     + get_position(): Position
     + step()
     + interact(force: Int)
     + is_inactive(): Bool
 }
 
-Monster *-- MonsterParams
+Monster *-- ActorParams
 Monster ..|> IEnemy
 Monster --> IMap
 BossMonster --> IMap
 
 class BossMonster {
-    - health: Int
-    - attack: Int
+    - params: ActorParams
     - position: Position
     - map: IMap
     - hero: Hero
@@ -290,7 +283,7 @@ class BossMonster {
     + is_inactive(): Bool
     + try_move(): Bool
 
-    + constructor(params: MonsterParams, position: Position, map: IMap, hero: Hero, strategyL IBossStrategy)
+    + constructor(params: ActorParams, position: Position, map: IMap, hero: Hero, strategyL IBossStrategy)
     + get_position(): Position
     + step()
 }
@@ -317,9 +310,9 @@ package play_cycle {
 class GlobalConfig {
     {static} - config: GlobalConfig
     - map_size: (Int, Int)
-    - initial_hero_params: HeroParams
-    - monster_param_pool: MonsterParams[]
-    - boss_param_pool: MonsterParams[]
+    - initial_hero_params: ActorParams
+    - monster_param_pool: ActorParams[]
+    - boss_param_pool: ActorParams[]
     - object_view: Map<Type, String>
     - boss_strategies: Map<String, Callable>
     - boss_id_cards: List<IDCard>
@@ -328,9 +321,9 @@ class GlobalConfig {
 
     {static} + get_instance(): GlobalConfig
     + get_map_size(): (Int, Int)
-    + get_initial_hero_params(): HeroParams
-    + get_monster_param_pool(): MonsterParams[]
-    + get_boss_param_pool(): MonsterParams[]
+    + get_initial_hero_params(): ActorParams
+    + get_monster_param_pool(): ActorParams[]
+    + get_boss_param_pool(): ActorParams[]
     + get_object_view(o: ICellObject): String
     + get_boss_strategies(): Iterator<String>
     + get_boss_strategy(name: String): Callable
