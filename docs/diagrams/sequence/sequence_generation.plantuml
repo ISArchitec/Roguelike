@@ -1,0 +1,46 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Генерация уровня
+
+participant Game
+participant RandomLevelGenerator as Generator
+participant GlobalConfig as Config
+participant MapBuilder as Builder
+participant Cell
+participant Map
+
+Game -> Generator: generate_level(section_number)
+activate Generator
+Generator -> Config: get_map_size()
+Config --> Generator: map_size: (Int, Int)
+Generator -> Builder: new(width, height)
+loop Для каждой клетки-стены
+    Builder -> Cell: make_wall()
+end
+loop Для каждого прохода
+    Generator -> Builder: add_passage(position)
+end
+Generator -> Builder: to_map()
+Builder --> Generator: level_map: Map
+alt Обычный уровень
+    Generator -> Config: get_monster_param_pool()
+    Config --> Generator: monster_params: ActorParams[]
+    loop Для каждого противника уровня
+        Generator -> Generator: enemy = generate_enemy()
+        Generator -> Map: add_object(enemy)
+    end
+else Уровень с боссом
+    Generator -> Config: get_boss_param_pool()
+    Config --> Generator: boss_params: ActorParams[]
+    Generator -> Config: get_boss_strategy(name)
+    Config --> Generator: boss_strategy: Callable
+    Generator -> Generator: boss = generate_enemy()
+    Generator -> Map: add_object(boss)
+end
+Generator --> Game: level_map: Map
+deactivate Generator
+@enduml

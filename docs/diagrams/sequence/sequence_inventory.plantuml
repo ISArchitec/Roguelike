@@ -1,0 +1,34 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Просмотр инвентаря и выбор удостоверения
+
+actor Игрок as Player
+participant Console
+participant Hero
+participant HeroInventory as Inventory
+
+alt Просмотр одноразовых бонусов
+    Player -> Console: просмотреть инвентарь
+    Console -> Hero: get_bonuses()
+    Hero -> Inventory: get_bonuses()
+    Inventory --> Hero: bonuses: Iterator<OneTimeBonus>
+    Hero --> Console: bonuses: Iterator<OneTimeBonus>
+else Просмотр удостоверений
+    Player -> Console: просмотреть удостоверения
+    Console -> Hero: get_id_cards()
+    Hero -> Inventory: get_id_cards()
+    Inventory --> Hero: cards: Iterator<IDCard>
+    Hero --> Console: cards: Iterator<IDCard>
+    opt Начало нового уровня
+        Console -> Console: choose_from_cards(cards)
+        Player -> Console: выбрать удостоверение
+        Console --> Console: index: Int
+        Console -> Hero: use_id_card(index)
+        Hero -> Inventory: use_id_card(index)
+    end
+end
+@enduml

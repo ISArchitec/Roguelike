@@ -1,0 +1,36 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Ход монстра
+
+participant Game
+participant Monster
+participant Map
+participant Cell
+participant ICellObject as Object
+participant Console
+
+Game -> Monster: step()
+activate Monster
+alt Перемещение
+    Monster -> Map: move(monster, direction)
+    Map --> Monster: moved: Bool
+else Атака
+    Monster -> Map: interact(monster, direction, force)
+    activate Map
+    Map -> Cell: get_object()
+    Cell --> Map: object: ICellObject
+    Map -> Object: interact(force)
+    Map -> Object: is_inactive()
+    Object --> Map: inactive: Bool
+    Map -> Console: register_attack(position, direction)
+    opt Объект деактивирован
+        Map -> Game: count_down_on_terminate() через callback
+    end
+    deactivate Map
+end
+deactivate Monster
+@enduml

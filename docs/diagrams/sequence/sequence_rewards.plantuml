@@ -1,0 +1,32 @@
+﻿@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Награда за прохождение уровня
+
+actor Игрок as Player
+participant Game
+participant GlobalConfig as Config
+participant Console
+participant Hero
+participant HeroInventory as Inventory
+
+alt Обычный уровень
+    Game -> Config: get_certificate(random_index)
+    Config --> Game: certificate: Certificate
+    Game -> Hero: add_certificate(certificate)
+    Hero -> Inventory: add_certificate(certificate)
+else Босс, кроме последнего
+    loop Для каждого из двух удостоверений
+        Game -> Config: get_boss_prizes(index)
+        Config --> Game: card: IDCard
+    end
+    Game -> Console: choose_from_cards(cards)
+    Player -> Console: выбрать удостоверение
+    Console --> Game: selected_index: Int
+    Game -> Hero: add_id_card(cards[selected_index])
+    Hero -> Inventory: add_id_card(card)
+end
+@enduml
