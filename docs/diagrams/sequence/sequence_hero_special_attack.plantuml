@@ -10,7 +10,7 @@ participant Hero
 participant SpecialAttackEvent as Event
 participant HeroInventory as Inventory
 participant IDCard as Card
-participant IEnemy as Enemy
+participant Map
 
 activate Event
 Event -> Hero: special_attack()
@@ -20,14 +20,9 @@ Inventory --> Hero: has_card: Bool
 opt Удостоверение выбрано
     ref over Hero, Card: Проверка перезарядки
     opt Атака доступна
-        opt Для атаки требуется сила удостоверения
-            Hero -> Card: calculate_force()
-            Card --> Hero: force: Int
-        end
-        ref over Hero, Enemy: Определение затронутых противников
-        loop Для каждого затронутого противника
-            ref over Hero, Enemy: Применение специальной атаки
-        end
+        Hero -> Card: calculate_force()
+        Card --> Hero: force: Int
+        Hero -> Map: special_attack(hero, radius, force)
         ref over Hero, Card: Запуск перезарядки
     end
 end

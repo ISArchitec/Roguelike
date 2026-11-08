@@ -26,6 +26,7 @@ else Выбрана обычная атака
     Boss -> Map: interact(boss, direction, force)
 else Выбрана специальная атака
     Boss -> Boss: action(boss)
+    Boss -> Map: special_attack(boss, radius, force)
 end
 deactivate Boss
 @enduml
