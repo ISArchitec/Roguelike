@@ -1,0 +1,53 @@
+@startuml
+skinparam shadowing false
+skinparam nodesep 20
+skinparam ranksep 40
+
+title Диаграмма компонентов
+
+interface "ICellObject"      as ICell
+interface "IMap"             as IMap
+interface "IActor"           as IActor
+interface "IEvent"           as IEvent
+interface "IModelSubscriber" as IModelSub
+interface "IEnemy"           as IEnemy
+interface "ILevelGenerator"  as ILevelGen
+
+component "game"        as game
+component "positioning" as positioning
+component "hero"        as hero
+component "hero_bonuses" as HeroBonuses
+component "map"         as map
+component "monsters"    as monsters
+component "generation"  as generation
+component "play_cycle"  as play_cycle
+component "view"        as view
+component "serializing" as serializing
+
+hero        -up- ICell
+HeroBonuses -up- ICell
+monsters    -up- ICell
+map         -up- IMap
+hero        -up- IActor
+monsters    -up- IActor
+hero        -up- IEvent
+view        -up- IModelSub
+monsters    -up- IEnemy
+generation  -up- ILevelGen
+
+map         --( ICell
+map         --( IModelSub
+hero        --( IMap
+monsters    --( IMap
+play_cycle  --( IActor
+play_cycle  --( IModelSub
+play_cycle  --( IEnemy
+play_cycle  --( ICell
+play_cycle  --( IEvent
+play_cycle  --( ILevelGen
+view        --( ICell
+
+map ..> positioning
+play_cycle ..> game
+
+@enduml
