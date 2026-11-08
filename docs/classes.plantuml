@@ -1,6 +1,9 @@
 @startuml
 skinparam classAttributeIconSize 0
 skinparam shadowing false
+skinparam linetype polyline
+skinparam nodesep 150
+skinparam ranksep 150
 
 title Диаграмма классов
 
@@ -471,56 +474,40 @@ class IActorLoader {
     {static} + save_to(game: IActor): Json
 }
 
-IActorLoader --> game.IActor : (de)serialize
-
 class ICellObjectLoader {
     {static} + load_from(json: Json): ICellObject
     {static} + save_to(o: ICellObject): Json
 }
-
-ICellObjectLoader --> positioning.ICellObject : (de)serialize
 
 class PositionLoader {
     {static} + load_from(json: Json): Position
     {static} + save_to(p: Position): Json
 }
 
-PositionLoader --> positioning.Position : (de)serialize
-
 class OneTimeBonusLoader {
     {static} + load_from(json: Json): OneTimeBonus
     {static} + save_to(t: OneTimeBonus): Json
 }
-
-OneTimeBonusLoader --> hero_bonuses.OneTimeBonus : (de)serialize
 
 class MapLoader {
     {static} + load_from(json: Json): Map
     {static} + save_to(game: Map): Json
 }
 
-MapLoader --> map.Map : (de)serialize
-
 class CellLoader {
     {static} + load_from(json: Json): Cell
     {static} + save_to(cell: Cell): Json
 }
-
-CellLoader --> map.Cell : (de)serialize
 
 class GameLoader {
     {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
     {static} + save_to(game: Game): Json
 }
 
-GameLoader --> play_cycle.Game : (de)serialize
-
 class RandomLevelGeneratorLoader {
     {static} + load_from(json: Json): ILevelGenerator
     {static} + save_to(g: ILevelGenerator): Json
 }
-
-RandomLevelGeneratorLoader --> generation.RandomLevelGenerator : (de)serialize
 
 }
 
