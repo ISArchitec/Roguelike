@@ -1,0 +1,31 @@
+﻿@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Специальная атака героя
+
+participant Hero
+participant SpecialAttackEvent as Event
+participant HeroInventory as Inventory
+participant IDCard as Card
+participant Map
+
+activate Event
+Event -> Hero: special_attack()
+activate Hero
+Hero -> Inventory: has_current_id_card()
+Inventory --> Hero: has_card: Bool
+opt Удостоверение выбрано
+    ref over Hero, Card: Проверка перезарядки
+    opt Атака доступна
+        Hero -> Card: calculate_force()
+        Card --> Hero: force: Int
+        Hero -> Map: special_attack(hero, radius, force)
+        ref over Hero, Card: Запуск перезарядки
+    end
+end
+deactivate Hero
+deactivate Event
+@enduml

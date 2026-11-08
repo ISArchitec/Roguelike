@@ -1,0 +1,22 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Начальный набор предметов
+
+participant Game
+participant GlobalConfig as Config
+
+Game -> Config: get_instance()
+Config --> Game: config: GlobalConfig
+loop Фиксированное число предметов восстановления здоровья
+    Game -> Config: get_special_thing(healing_index)
+    Config --> Game: healing_item: OneTimeBonus
+end
+loop Случайный набор предметов с модификаторами
+    Game -> Config: get_special_thing(random_index)
+    Config --> Game: bonus: OneTimeBonus
+end
+@enduml
