@@ -1,0 +1,72 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Перемещение героя
+
+participant MovingEvent as Event
+participant Hero
+participant Map
+participant Position
+participant Cell
+participant ICellObject as Object
+participant Console
+participant Game
+
+activate Event
+Event -> Hero: try_move(direction)
+activate Hero
+Hero -> Map: move(hero, direction)
+activate Map
+Map -> Position: move(direction)
+Position --> Map: target_position: Option<Position>
+opt Позиция существует
+    Map -> Cell: is_wall()
+    Cell --> Map: is_wall: Bool
+    opt Клетка не является стеной
+        Map -> Cell: empty()
+        Cell --> Map: is_empty: Bool
+        opt Клетка свободна
+            Map -> Cell: check_in(hero)
+            Cell --> Map: can_enter: Bool
+            opt Перемещение разрешено
+                Map -> Cell: remove_cell_object(hero)
+                Map -> Cell: add_cell_object(hero)
+                Cell --> Map: added: Bool
+                Map -> Console: register_move(position, direction)
+            end
+        end
+    end
+end
+Map --> Hero: moved: Bool
+deactivate Map
+opt Перемещение не удалось
+    Hero -> Map: interact(hero, direction, params.attack)
+    activate Map
+    Map -> Position: move(direction)
+    Position --> Map: target_position: Option<Position>
+    opt Позиция существует
+        Map -> Cell: empty()
+        Cell --> Map: is_empty: Bool
+        opt Клетка занята
+            Map -> Cell: get_object()
+            Cell --> Map: target: ICellObject
+            opt В клетке противник
+                Map -> Object: interact(force)
+                Map -> Console: register_attack(position, direction)
+                Map -> Object: is_inactive()
+                Object --> Map: inactive: Bool
+                opt Противник побеждён
+                    Map -> Cell: remove_cell_object(target)
+                    Map -> Game: count_down_on_terminate() через callback
+                end
+            end
+        end
+    end
+    deactivate Map
+end
+deactivate Hero
+deactivate Event
+@enduml

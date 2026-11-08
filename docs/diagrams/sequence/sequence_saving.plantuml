@@ -1,0 +1,48 @@
+﻿@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Сохранение игры
+
+participant Console
+participant GameLoader
+participant RandomLevelGeneratorLoader as GeneratorLoader
+participant MapLoader
+participant CellLoader
+participant PositionLoader
+participant ICellObjectLoader as ObjectLoader
+participant IActorLoader as ActorLoader
+participant OneTimeBonusLoader as BonusLoader
+
+Console -> GameLoader: save_to_file(game, path)
+activate GameLoader
+GameLoader -> GeneratorLoader: save_to(generator)
+GeneratorLoader --> GameLoader: generator_data
+GameLoader -> MapLoader: save_to(map)
+loop Для каждой клетки карты
+    MapLoader -> CellLoader: save_to(cell)
+    CellLoader -> PositionLoader: save_to(position)
+    PositionLoader --> CellLoader: position_data
+    opt В клетке есть объект
+        CellLoader -> ObjectLoader: save_to(object)
+        ObjectLoader --> CellLoader: object_data
+    end
+    CellLoader --> MapLoader: cell_data
+end
+MapLoader --> GameLoader: map_data
+loop Для каждого участника уровня
+    GameLoader -> ActorLoader: save_to(actor)
+    ActorLoader -> PositionLoader: save_to(position)
+    PositionLoader --> ActorLoader: position_data
+    opt Участник — герой
+        loop Для каждого одноразового бонуса героя
+            ActorLoader -> BonusLoader: save_to(bonus)
+            BonusLoader --> ActorLoader: bonus_data
+        end
+    end
+    ActorLoader --> GameLoader: actor_data
+end
+deactivate GameLoader
+@enduml

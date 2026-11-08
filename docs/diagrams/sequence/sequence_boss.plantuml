@@ -1,0 +1,32 @@
+﻿@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Ход босса
+
+participant Game
+participant BossMonster as Boss
+participant IBossStrategy as Strategy
+participant Map
+
+Game -> Boss: step()
+activate Boss
+Boss -> Strategy: get_action(hero, boss)
+activate Strategy
+Strategy --> Boss: action: Callable
+deactivate Strategy
+alt Выбрано перемещение
+    Boss -> Boss: action(boss)
+    Boss -> Map: move(boss, direction)
+    Map --> Boss: moved: Bool
+else Выбрана обычная атака
+    Boss -> Boss: action(boss)
+    Boss -> Map: interact(boss, direction, force)
+else Выбрана специальная атака
+    Boss -> Boss: action(boss)
+    Boss -> Map: special_attack(boss, radius, force)
+end
+deactivate Boss
+@enduml

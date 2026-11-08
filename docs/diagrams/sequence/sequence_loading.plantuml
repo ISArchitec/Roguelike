@@ -1,0 +1,57 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Загрузка игры
+
+participant Console
+participant GameLoader
+participant RandomLevelGeneratorLoader as GeneratorLoader
+participant MapLoader
+participant CellLoader
+participant PositionLoader
+participant ICellObjectLoader as ObjectLoader
+participant IActorLoader as ActorLoader
+participant OneTimeBonusLoader as BonusLoader
+participant Map
+participant Game
+
+Console -> Console: continue_game()
+Console -> GameLoader: load_from_file(path, event_queue, console)
+activate GameLoader
+GameLoader -> GeneratorLoader: load_from(generator_data)
+GeneratorLoader --> GameLoader: generator: ILevelGenerator
+GameLoader -> MapLoader: load_from(map_data)
+loop Для каждой клетки карты
+    MapLoader -> CellLoader: load_from(cell_data)
+    CellLoader -> PositionLoader: load_from(position_data)
+    PositionLoader --> CellLoader: position: Position
+    opt В клетке есть объект
+        CellLoader -> ObjectLoader: load_from(object_data)
+        ObjectLoader --> CellLoader: object: ICellObject
+    end
+    CellLoader --> MapLoader: cell: Cell
+end
+MapLoader -> Map: create_from(width, height, cells, console, callback)
+MapLoader --> GameLoader: map: Map
+loop Для каждого участника уровня
+    GameLoader -> ActorLoader: load_from(actor_data)
+    ActorLoader -> PositionLoader: load_from(position_data)
+    PositionLoader --> ActorLoader: position: Position
+    opt Участник — герой
+        loop Для каждого одноразового бонуса героя
+            ActorLoader -> BonusLoader: load_from(bonus_data)
+            BonusLoader --> ActorLoader: bonus: OneTimeBonus
+        end
+    end
+    ActorLoader --> GameLoader: actor: IActor
+end
+GameLoader -> Game: create_from(...)
+GameLoader --> Console: game: Game
+deactivate GameLoader
+opt Сейчас ход не героя
+    ref over Console: Индикация текущего участника
+end
+@enduml

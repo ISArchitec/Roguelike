@@ -1,0 +1,63 @@
+@startuml
+title Roguelike — Диаграмма конечных автоматов
+
+hide empty description
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundcorner 18
+skinparam linetype polyline
+skinparam nodesep 130
+skinparam ranksep 120
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam padding 8
+
+skinparam ArrowColor #64748B
+skinparam ArrowThickness 1.6
+skinparam ArrowFontColor #334155
+skinparam ArrowFontSize 12
+
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #94A3B8
+  FontColor #1E293B
+  FontSize 14
+  BorderThickness 1.5
+  StartColor #475569
+  EndColor #475569
+}
+
+state "Главное меню" as Menu #DBEAFE
+state "Победа"       as Victory #D1FAE5
+state "Поражение"    as Defeat  #FFE4E6
+
+state "Игровой процесс" as GameProcess #FFFFFF {
+  state "Игровой уровень"   as Level #DCFCE7
+  state "Сражение с боссом" as Boss  #FEE2E2
+  state "Пауза"             as Pause #FEF3C7
+
+  [*] -down-> Level
+
+  Level -down-> Boss  : Босс появился\n[босс активен]\n/ create_boss()
+  Boss  -up->   Level : Босс побеждён\n[не последний уровень]\n/ give_reward();\ngenerate_level()
+
+  Level -right-> Pause : Приостановить\n/ game.stop()
+  Boss  -right-> Pause : Приостановить\n/ game.stop()
+
+  Pause -up-> [H] : Продолжить\n/ resume()
+}
+
+[*]  -right-> Menu
+Menu -right-> [*] : Выход\n/ завершить приложение
+
+Menu -down-> GameProcess : Новая игра\n/ Game.create_new()
+Menu -down-> GameProcess : Загрузка\n[сохранение существует]\n/ GameLoader.load_from()
+
+GameProcess -left->  Victory : Все уровни пройдены\n[game.has_won_totally()]\n/ console.on_won()
+GameProcess -right-> Defeat  : Герой погиб\n[game.has_lost_level()]\n/ console.on_lost()
+
+Victory -up-> Menu : Вернуться в меню\n/ console.show_start_menu()
+Defeat  -up-> Menu : Вернуться в меню\n/ console.show_start_menu()
+
+@enduml

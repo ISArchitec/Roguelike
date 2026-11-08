@@ -1,0 +1,25 @@
+﻿@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Использование одноразового бонуса
+
+participant OneTimeBonusEvent as Event
+participant Hero
+participant HeroInventory as Inventory
+participant OneTimeBonus as Bonus
+
+activate Event
+Event -> Hero: use_bonus(index)
+activate Hero
+Hero -> Inventory: use_bonus(index)
+Inventory -> Bonus: get_modifier()
+Bonus --> Inventory: modifier: ActorParams
+ref over Inventory, Bonus: Удаление использованного предмета из инвентаря
+Inventory --> Hero: modifier: ActorParams
+Hero -> Hero: apply_modifiers(modifier)
+deactivate Hero
+deactivate Event
+@enduml
