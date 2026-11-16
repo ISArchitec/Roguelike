@@ -12,6 +12,9 @@ class IDCard(ICellObject):
     def get_position(self) -> Position:
         return self._position
 
+    def set_position(self, position: Position) -> None:
+        self._position = position
+
     def interact(self, force: int):
         pass
 

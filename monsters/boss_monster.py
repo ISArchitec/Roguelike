@@ -16,6 +16,9 @@ class BossMonster(IEnemy):
     def get_position(self):
         return self._position
 
+    def set_position(self, position: Position) -> None:
+        self._position = position
+
     def interact(self, force: int):
         self._params = self._params.get_hit(force)
         if self._params.health < 0:

@@ -9,6 +9,10 @@ class ICellObject(ABC):
         pass
 
     @abstractmethod
+    def set_position(self, position: Position) -> None:
+        pass
+
+    @abstractmethod
     def interact(self, force: int):
         pass
 

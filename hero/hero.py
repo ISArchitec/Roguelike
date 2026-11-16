@@ -3,7 +3,7 @@ from collections import deque
 from game import ActorParams, IEvent, IActor
 from positioning import Position, IMap, ICellObject, Direction
 from bonuses import OneTimeBonus, IDCard, Certificate
-from inventory import Inventory
+from hero.inventory import Inventory
 
 
 class Hero(IActor, ICellObject):
@@ -33,6 +33,9 @@ class Hero(IActor, ICellObject):
 
     def get_position(self) -> Position:
         return self._position
+
+    def set_position(self, position: Position) -> None:
+        self._position = position
 
     def interact(self, force: int):
         self._params = self._params.get_hit(force)
