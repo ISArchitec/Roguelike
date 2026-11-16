@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from map_interface import IMap
-from position import Position
+from positioning.map_interface import IMap
+from positioning.position import Position
 
 
 class IAreaAttack(ABC):

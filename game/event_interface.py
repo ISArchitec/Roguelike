@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from actor_interface import IActor
+from game.actor_interface import IActor
 
 
 class IEvent(ABC):

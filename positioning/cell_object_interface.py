@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from position import Position
+from positioning.position import Position
 
 
 class ICellObject(ABC):

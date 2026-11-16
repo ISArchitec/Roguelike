@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
-from cell_object_interface import ICellObject
-from direction import Direction
-from position import Position
+from positioning.cell_object_interface import ICellObject
+from positioning.direction import Direction
+from positioning.position import Position
 
 
 class IMap(ABC):
