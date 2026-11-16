@@ -1,5 +1,6 @@
+from game import IAreaAttack
 from monsters import IMonsterStrategy
-from positioning import Position, IAreaAttack, IMap
+from positioning import Position, IMap
 
 
 class SimpleMonsterStrategy(IMonsterStrategy):

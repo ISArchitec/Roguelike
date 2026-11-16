@@ -1,4 +1,5 @@
-from positioning import IAreaAttack, Position, ICellObject, IMap
+from game import IAreaAttack
+from positioning import Position, ICellObject, IMap
 
 
 class IDCard(ICellObject):

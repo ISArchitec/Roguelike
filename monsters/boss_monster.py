@@ -1,7 +1,7 @@
 from enemy_interface import IEnemy
 from monster_strategy_interface import IMonsterStrategy
-from game import ActorParams
-from positioning import Position, IMap, IAreaAttack
+from game import ActorParams, IAreaAttack
+from positioning import Position, IMap
 
 
 class BossMonster(IEnemy):
