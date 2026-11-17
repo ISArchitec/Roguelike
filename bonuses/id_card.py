@@ -10,6 +10,7 @@ class IDCard(ICellObject):
         self._timeout = timeout
         self._position = position
         self._tick_since = tick_since
+        self._tick_getter: Callable[[], int] | None = None
         self._on_pickup: Callable[[], None] | None = None
 
     def get_position(self) -> Position:
@@ -29,9 +30,15 @@ class IDCard(ICellObject):
     def is_inactive(self) -> bool:
         return self._on_pickup is None
 
-    def special_attack(self, map: IMap, position: Position):
+    def special_attack(self, map: IMap, position: Position) -> bool:
+        if self._tick_getter is None:
+            raise RuntimeError("Card tick getter has not been set")
+        tick = self._tick_getter()
+        if tick - self._tick_since < self._timeout:
+            return False
         self._attack.special_attack(map, position)
+        self._tick_since = tick
+        return True
 
-    def set_tick_getter(self, callback):
-        # I have no idea, what does this mean
-        pass
+    def set_tick_getter(self, callback: Callable[[], int]) -> None:
+        self._tick_getter = callback

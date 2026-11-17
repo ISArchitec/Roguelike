@@ -99,5 +99,4 @@ class Hero(IActor, ICellObject):
             return False
         if self._map is None:
             raise RuntimeError("Hero map has not been set")
-        id_card.special_attack(self._map, self._position)
-        return True
+        return id_card.special_attack(self._map, self._position)

@@ -34,6 +34,8 @@ class Game:
         self._reward_placed = reward_placed
         self._save_date = save_date
         self._map.set_on_terminate_object(self._count_down_on_terminate)
+        for card in self._hero.get_id_cards():
+            card.set_tick_getter(self.get_ticks)
 
     @staticmethod
     def create_new(level_generator: ILevelGenerator, event_queue: deque[IEvent], console: IModelSubscriber) -> "Game":
@@ -124,6 +126,7 @@ class Game:
             if not 0 <= selected_index < len(cards):
                 raise ValueError("Selected card index is outside the offered choices")
             reward = cards[selected_index]
+            reward.set_tick_getter(self.get_ticks)
             reward.set_on_pickup(lambda: self._hero.add_id_card(reward))
         else:
             pool_size = config.get_certificate_pool_size()
