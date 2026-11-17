@@ -1,4 +1,4 @@
-from collections import deque
+from queue import Queue
 from copy import deepcopy
 from datetime import datetime, timezone
 from random import randrange, sample
@@ -38,7 +38,7 @@ class Game:
             card.set_tick_getter(self.get_ticks)
 
     @staticmethod
-    def create_new(level_generator: ILevelGenerator, event_queue: deque[IEvent], console: IModelSubscriber) -> "Game":
+    def create_new(level_generator: ILevelGenerator, event_queue: Queue[IEvent], console: IModelSubscriber) -> "Game":
         config = GlobalConfig.get_instance()
         params = config.get_initial_hero_params()
         one_timers = Game._create_initial_inventory(config)

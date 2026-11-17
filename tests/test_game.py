@@ -1,4 +1,4 @@
-from collections import deque
+from queue import Queue
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -62,19 +62,19 @@ def build_game(dependencies):
 
 
 def test_new_game_registers_save(dependencies):
-    game = Game.create_new(dependencies.generator, deque(), dependencies.console)
+    game = Game.create_new(dependencies.generator, Queue(), dependencies.console)
     dependencies.config.register_save.assert_called_once_with(game.get_save_date())
     assert game.get_save_date().utcoffset().total_seconds() == 0
 
 
 def test_new_game_generates_first_level(dependencies):
-    Game.create_new(dependencies.generator, deque(), dependencies.console)
+    Game.create_new(dependencies.generator, Queue(), dependencies.console)
     section, _, console = dependencies.generator.generate_level.call_args.args
     assert (section, console) == (0, dependencies.console)
 
 
 def test_new_game_copies_initial_inventory(dependencies):
-    Game.create_new(dependencies.generator, deque(), dependencies.console)
+    Game.create_new(dependencies.generator, Queue(), dependencies.console)
     hero = dependencies.generator.generate_level.call_args.args[1]
     bonuses = list(hero.get_one_time_bonuses())
     assert len(bonuses) == 2
