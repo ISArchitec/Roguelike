@@ -30,8 +30,8 @@ class Map(IMap):
     def draw(self) -> None:
         for cell in self._cells:
             if cell.is_wall():
+                self._console.draw_passage(cell.position)
                 continue
-            self._console.draw_passage(cell.position)
             if not cell.empty():
                 obj = cell.get_object()
                 self._console.draw_object(obj)
