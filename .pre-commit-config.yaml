@@ -1,4 +1,6 @@
 default_install_hook_types: [pre-commit]
+exclude: ^docs/
+files: \.py$
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
