@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from actor_interface import IActor
+import hero
 
 
 class IEvent(ABC):
     @abstractmethod
-    def accept_actor(self, actor: IActor):
+    def accept_hero(self, hero: "hero.Hero") -> None:
         pass

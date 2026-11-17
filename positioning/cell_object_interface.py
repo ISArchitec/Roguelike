@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
 
-from position import Position
+from positioning.position import Position
 
 
 class ICellObject(ABC):
     @abstractmethod
     def get_position(self) -> Position:
+        pass
+
+    @abstractmethod
+    def set_position(self, position: Position) -> None:
         pass
 
     @abstractmethod

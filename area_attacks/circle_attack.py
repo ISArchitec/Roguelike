@@ -1,4 +1,5 @@
-from positioning import IAreaAttack, IMap, Position
+from game import IAreaAttack
+from positioning import IMap, Position
 
 
 class CircleAttack(IAreaAttack):

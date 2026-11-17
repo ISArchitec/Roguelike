@@ -1,7 +1,8 @@
+from game import IAreaAttack
 from abc import ABC, abstractmethod
 
-from monster_action import MonsterAction
-from positioning import Position, IAreaAttack, IMap
+from monsters.monster_action import MonsterAction
+from positioning import Position, IMap
 
 
 class IMonsterStrategy(ABC):
