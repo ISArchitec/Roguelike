@@ -42,9 +42,6 @@ class Hero(IActor, ICellObject):
 
     def interact(self, force: int):
         self._params = self._params.get_hit(force)
-        if self._params.health < 0:
-            # TODO handle hero death
-            pass
 
     def is_inactive(self) -> bool:
         return self._params.health <= 0
