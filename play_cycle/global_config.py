@@ -1,7 +1,10 @@
 import json
+import os
 from collections.abc import Callable, Iterator
 from copy import deepcopy
+from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from area_attacks import CircleAttack, StraightAttack, WaveAttack
 from bonuses import Certificate, IDCard, OneTimeBonus
@@ -16,7 +19,8 @@ class GlobalConfig:
     _config: "GlobalConfig | None" = None
 
     def __init__(self, path: str | Path = Path(__file__).resolve().parent.parent / "configs" / "config.json"):
-        self._load(Path(path))
+        self._path = Path(path).resolve()
+        self._load(self._path)
 
     @staticmethod
     def get_instance() -> "GlobalConfig":
@@ -66,9 +70,49 @@ class GlobalConfig:
     def get_initial_thing_pool_size(self) -> int:
         return len(self._initial_thing_pool)
 
+    def register_save(self, save_date: datetime) -> None:
+        if save_date.tzinfo is None or save_date.utcoffset() is None:
+            raise ValueError("Save date must include a timezone")
+        if save_date in self._actual_saves:
+            raise ValueError("Save date is already registered")
+        self._write_actual_saves(self._actual_saves | {save_date.astimezone(timezone.utc)})
+
+    def is_save_actual(self, save_date: datetime) -> bool:
+        return save_date in self._actual_saves
+
+    def invalidate_save(self, save_date: datetime) -> None:
+        if save_date in self._actual_saves:
+            self._write_actual_saves(self._actual_saves - {save_date})
+
+    def _write_actual_saves(self, actual_saves: set[datetime]) -> None:
+        with self._path.open(encoding="utf-8") as stream:
+            data = json.load(stream)
+        data["actual_saves"] = sorted(date.isoformat(timespec="microseconds") for date in actual_saves)
+        temporary_path = None
+        try:
+            with NamedTemporaryFile(mode="w", encoding="utf-8", dir=self._path.parent, delete=False) as stream:
+                temporary_path = Path(stream.name)
+                json.dump(data, stream, ensure_ascii=False, indent=2)
+                stream.write("\n")
+                stream.flush()
+            os.replace(temporary_path, self._path)
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
+        self._actual_saves = actual_saves
+
     def _load(self, path: Path) -> None:
         with path.open(encoding="utf-8") as stream:
             data = json.load(stream)
+        actual_saves = data.get("actual_saves", [])
+        if not isinstance(actual_saves, list):
+            raise ValueError("Actual saves must be a list of dates")
+        self._actual_saves: set[datetime] = set()
+        for value in actual_saves:
+            save_date = datetime.fromisoformat(value)
+            if save_date.tzinfo is None or save_date.utcoffset() is None:
+                raise ValueError("Save date must include a timezone")
+            self._actual_saves.add(save_date.astimezone(timezone.utc))
         width, height = data["map_size"]
         self._map_size = (self._read_int(width, "map width", 1), self._read_int(height, "map height", 1))
         self._initial_hero_params = self._read_params(data["initial_hero_params"])

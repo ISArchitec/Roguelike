@@ -1,5 +1,6 @@
 from collections import deque
 from copy import deepcopy
+from datetime import datetime, timezone
 from random import randrange, sample
 
 from bonuses import OneTimeBonus
@@ -16,7 +17,7 @@ _MAX_SECTION_PASSED = 5
 class Game:
     def __init__(self, section_passed: int, level_generator: ILevelGenerator, map: Map, actors: list[IActor],
                  ticks: int, hero: Hero, console: IModelSubscriber, enemy_count: int, thing_got: int,
-                 is_section_end: bool, reward_placed: bool):
+                 is_section_end: bool, reward_placed: bool, save_date: datetime):
         if section_passed < 0 or ticks < 0:
             raise ValueError("Section and tick counters cannot be negative")
         self._section_passed = section_passed
@@ -31,6 +32,7 @@ class Game:
         self._thing_got = thing_got
         self._is_section_end = is_section_end
         self._reward_placed = reward_placed
+        self._save_date = save_date
 
     @staticmethod
     def create_new(level_generator: ILevelGenerator, event_queue: deque[IEvent], console: IModelSubscriber) -> "Game":
@@ -40,19 +42,24 @@ class Game:
         hero = Hero(params, Position(0, 0), one_timers, event_queue)
         map, enemies, is_section_end = level_generator.generate_level(0, hero)
         hero.set_map(map)
-        return Game(0, level_generator, map, enemies, 0, hero, console, len(enemies), 1, is_section_end)
+        save_date = datetime.now(timezone.utc)
+        game = Game(0, level_generator, map, enemies, 0, hero, console, len(enemies), 1, is_section_end, False, save_date)
+        config.register_save(save_date)
+        return game
 
     @staticmethod
     def create_from(section_passed: int, level_generator: ILevelGenerator, map: Map, actors: list[IActor],
                     ticks: int, hero: Hero, console: IModelSubscriber, enemy_count: int, thing_got: int,
-                    is_section_end: bool, reward_placed: bool) -> "Game":
-        return Game(section_passed, level_generator, map, actors, ticks, hero, console, enemy_count, thing_got, is_section_end, reward_placed)
+                    is_section_end: bool, reward_placed: bool, save_date: datetime) -> "Game":
+        if not GlobalConfig.get_instance().is_save_actual(save_date):
+            raise ValueError("Save is no longer valid or was never registered")
+        return Game(section_passed, level_generator, map, actors, ticks, hero, console, enemy_count, thing_got, is_section_end, reward_placed, save_date)
 
     def run_game(self) -> None:
         while not self._is_stopped:
             if self.has_lost_level():
+                GlobalConfig.get_instance().invalidate_save(self._save_date)
                 self._console.on_lost()
-                # TODO: аннулировать сохранения
                 return
             if self.has_won_level():
                 self._console.on_won()
@@ -78,6 +85,9 @@ class Game:
 
     def get_ticks(self) -> int:
         return self._ticks
+
+    def get_save_date(self) -> datetime:
+        return self._save_date
 
     def _tick(self) -> None:
         for actor in self._actors:
