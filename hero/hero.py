@@ -47,7 +47,7 @@ class Hero(IActor, ICellObject):
             pass
 
     def is_inactive(self) -> bool:
-        return self._params.health == 0
+        return self._params.health <= 0
 
     # Actor methods
 

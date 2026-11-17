@@ -33,6 +33,7 @@ class Game:
         self._is_section_end = is_section_end
         self._reward_placed = reward_placed
         self._save_date = save_date
+        self._map.set_on_terminate_object(self._count_down_on_terminate)
 
     @staticmethod
     def create_new(level_generator: ILevelGenerator, event_queue: deque[IEvent], console: IModelSubscriber) -> "Game":
@@ -40,7 +41,7 @@ class Game:
         params = config.get_initial_hero_params()
         one_timers = Game._create_initial_inventory(config)
         hero = Hero(params, Position(0, 0), one_timers, event_queue)
-        map, enemies, is_section_end = level_generator.generate_level(0, hero)
+        map, enemies, is_section_end = level_generator.generate_level(0, hero, console)
         hero.set_map(map)
         save_date = datetime.now(timezone.utc)
         game = Game(0, level_generator, map, enemies, 0, hero, console, len(enemies), 1, is_section_end, False, save_date)
@@ -145,7 +146,9 @@ class Game:
         section_passed = self._section_passed
         if self._is_section_end:
             section_passed += 1
-        new_map, enemies, is_section_end = self._level_generator.generate_level(section_passed, self._hero)
+        new_map, enemies, is_section_end = self._level_generator.generate_level(
+            section_passed, self._hero, self._console)
+        new_map.set_on_terminate_object(self._count_down_on_terminate)
         self._hero.set_map(new_map)
         self._section_passed = section_passed
         self._is_section_end = is_section_end

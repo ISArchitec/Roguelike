@@ -20,5 +20,4 @@ class OneTimeBonus(ICellObject):
         pass
 
     def is_inactive(self) -> bool:
-        # I have no idea, what does this mean
         return True

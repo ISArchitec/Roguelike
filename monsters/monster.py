@@ -19,13 +19,9 @@ class Monster(IEnemy):
 
     def interact(self, force: int):
         self._params = self._params.get_hit(force)
-        if self._params.health < 0:
-            # TODO handle death of a monster
-            pass
 
     def is_inactive(self) -> bool:
-        # I have no idea, what does this mean
-        return True
+        return self._params.health <= 0
 
     def step(self):
         action_list = self._strategy.action(self._map, self._position, self._map.get_hero_position(), None,

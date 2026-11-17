@@ -8,8 +8,7 @@ from positioning import Direction, ICellObject, IMap, Position
 
 
 class Map(IMap):
-    def __init__(self, width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber,
-                 on_terminate_object: Callable[[], None]):
+    def __init__(self, width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber):
         if width <= 0 or height <= 0:
             raise ValueError("Map dimensions must be positive")
         if len(cells) != width * height:
@@ -18,13 +17,15 @@ class Map(IMap):
         self._height = height
         self._cells = cells
         self._console = console
-        self._on_terminate_object = on_terminate_object
+        self._on_terminate_object: Callable[[], None] | None = None
         self._hero = hero
 
     @staticmethod
-    def create_from(width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber,
-                    on_terminate_object: Callable[[], None]) -> "Map":
-        return Map(width, height, cells, hero, console, on_terminate_object)
+    def create_from(width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber) -> "Map":
+        return Map(width, height, cells, hero, console)
+
+    def set_on_terminate_object(self, callback: Callable[[], None]) -> None:
+        self._on_terminate_object = callback
 
     def draw(self) -> None:
         for cell in self._cells:
@@ -124,6 +125,8 @@ class Map(IMap):
         obj = cell.get_object()
         if obj is None:
             return
+        if self._on_terminate_object is None:
+            raise RuntimeError("Object termination callback has not been set")
         obj.interact(force)
         if obj.is_inactive():
             cell.remove_cell_object(obj)

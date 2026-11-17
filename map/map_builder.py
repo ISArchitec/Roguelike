@@ -1,5 +1,3 @@
-from collections.abc import Callable
-
 from hero import Hero
 from map.cell import Cell
 from map.map import Map
@@ -39,10 +37,10 @@ class MapBuilder:
         self.add_object(hero)
         self._hero = hero
 
-    def to_map(self, console: IModelSubscriber, on_terminate_object: Callable[[], None]) -> Map:
+    def to_map(self, console: IModelSubscriber) -> Map:
         if self._hero is None:
             raise ValueError("Hero must be added before building the map")
-        return Map.create_from(self._width, self._height, self._cells, self._hero, console, on_terminate_object)
+        return Map.create_from(self._width, self._height, self._cells, self._hero, console)
 
     def _position_index(self, position: Position) -> int:
         if (position is None or not 0 <= position.get_x() < self._width
