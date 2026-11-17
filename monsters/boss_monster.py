@@ -1,5 +1,5 @@
-from enemy_interface import IEnemy
-from monster_strategy_interface import IMonsterStrategy
+from monsters.enemy_interface import IEnemy
+from monsters.monster_strategy_interface import IMonsterStrategy
 from game import ActorParams, IAreaAttack
 from positioning import Position, IMap
 

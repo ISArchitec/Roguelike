@@ -1,0 +1,109 @@
+{
+  "map_size": [
+    20,
+    12
+  ],
+  "initial_hero_params": {
+    "health": 20,
+    "defence": 1,
+    "attack": 5,
+    "speed": 1
+  },
+  "monster_param_pool": [
+    {
+      "health": 10,
+      "defence": 0,
+      "attack": 3,
+      "speed": 1
+    }
+  ],
+  "boss_param_pool": [
+    {
+      "health": 30,
+      "defence": 2,
+      "attack": 6,
+      "speed": 1
+    }
+  ],
+  "object_view": {
+    "hero": "@",
+    "monster": "m",
+    "boss_monster": "B",
+    "certificate": "c",
+    "id_card": "i",
+    "one_time_bonus": "+"
+  },
+  "boss_id_cards": [
+    {
+      "attack": {
+        "type": "circle",
+        "radius": 1,
+        "force": 5
+      },
+      "timeout": 3,
+      "position": [
+        0,
+        0
+      ],
+      "tick_since": 0
+    },
+    {
+      "attack": {
+        "type": "straight",
+        "length": 3,
+        "direction": "UP",
+        "force": 5
+      },
+      "timeout": 3,
+      "position": [
+        0,
+        0
+      ],
+      "tick_since": 0
+    },
+    {
+      "attack": {
+        "type": "wave",
+        "forces": [
+          5,
+          3,
+          1
+        ]
+      },
+      "timeout": 4,
+      "position": [
+        0,
+        0
+      ],
+      "tick_since": 0
+    }
+  ],
+  "certificates": [
+    {
+      "health": 0,
+      "defence": 0,
+      "attack": 1,
+      "speed": 0
+    },
+    {
+      "health": 0,
+      "defence": 1,
+      "attack": 0,
+      "speed": 0
+    }
+  ],
+  "initial_thing_pool": [
+    {
+      "health": 5,
+      "defence": 0,
+      "attack": 0,
+      "speed": 0
+    },
+    {
+      "health": 0,
+      "defence": 0,
+      "attack": 2,
+      "speed": 0
+    }
+  ]
+}

@@ -1,3 +1,3 @@
-from circle_attack import CircleAttack
-from straight_attack import StraightAttack
-from wave_attack import WaveAttack
+from area_attacks.circle_attack import CircleAttack
+from area_attacks.straight_attack import StraightAttack
+from area_attacks.wave_attack import WaveAttack
