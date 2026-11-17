@@ -16,7 +16,7 @@ _MAX_SECTION_PASSED = 5
 class Game:
     def __init__(self, section_passed: int, level_generator: ILevelGenerator, map: Map, actors: list[IActor],
                  ticks: int, hero: Hero, console: IModelSubscriber, enemy_count: int, thing_got: int,
-                 is_section_end: bool):
+                 is_section_end: bool, reward_placed: bool):
         if section_passed < 0 or ticks < 0:
             raise ValueError("Section and tick counters cannot be negative")
         self._section_passed = section_passed
@@ -30,6 +30,7 @@ class Game:
         self._enemy_count = enemy_count
         self._thing_got = thing_got
         self._is_section_end = is_section_end
+        self._reward_placed = reward_placed
 
     @staticmethod
     def create_new(level_generator: ILevelGenerator, event_queue: deque[IEvent], console: IModelSubscriber) -> "Game":
@@ -44,8 +45,8 @@ class Game:
     @staticmethod
     def create_from(section_passed: int, level_generator: ILevelGenerator, map: Map, actors: list[IActor],
                     ticks: int, hero: Hero, console: IModelSubscriber, enemy_count: int, thing_got: int,
-                    is_section_end: bool) -> "Game":
-        return Game(section_passed, level_generator, map, actors, ticks, hero, console, enemy_count, thing_got, is_section_end)
+                    is_section_end: bool, reward_placed: bool) -> "Game":
+        return Game(section_passed, level_generator, map, actors, ticks, hero, console, enemy_count, thing_got, is_section_end, reward_placed)
 
     def run_game(self) -> None:
         while not self._is_stopped:
@@ -58,9 +59,8 @@ class Game:
                 if self.has_won_totally():
                     return
                 self._advance_level()
-            elif self._enemy_count == 0:
-                # TODO: добавить вещь на карту
-                pass
+            elif self._enemy_count == 0 and not self._reward_placed:
+                self._place_level_reward()
             self._tick()
 
     def has_won_level(self) -> bool:
@@ -101,7 +101,7 @@ class Game:
         return [deepcopy(config.get_special_thing(randrange(pool_size)))
                 for _ in range(config.get_initial_thing_count())]
 
-    def _give_level_reward(self) -> None:
+    def _place_level_reward(self) -> None:
         config = GlobalConfig.get_instance()
         if self._is_section_end:
             pool_size = config.get_boss_prize_pool_size()
@@ -111,16 +111,26 @@ class Game:
             selected_index = self._console.choose_from_cards(cards)
             if not 0 <= selected_index < len(cards):
                 raise ValueError("Selected card index is outside the offered choices")
-            self._hero.add_id_card(cards[selected_index])
+            reward = cards[selected_index]
+            reward.set_on_pickup(lambda: self._hero.add_id_card(reward))
         else:
             pool_size = config.get_certificate_pool_size()
             if pool_size == 0:
                 raise ValueError("Certificate pool cannot be empty")
-            certificate = deepcopy(config.get_certificate(randrange(pool_size)))
-            self._hero.add_certificate(certificate)
+            reward = deepcopy(config.get_certificate(randrange(pool_size)))
+            reward.set_on_pickup(lambda: self._hero.add_certificate(reward))
+        self._place_randomly(reward)
+        self._reward_placed = True
+
+    def _place_randomly(self, obj: ICellObject) -> None:
+        width, height = GlobalConfig.get_instance().get_map_size()
+        for index in sample(range(width * height), width * height):
+            obj.set_position(Position(index % width, index // width))
+            if self._map.add_object(obj):
+                return
+        raise ValueError("No free cell is available for the level reward")
 
     def _advance_level(self) -> None:
-        self._give_level_reward()
         section_passed = self._section_passed
         if self._is_section_end:
             section_passed += 1
@@ -132,3 +142,4 @@ class Game:
         self._actors = [self._hero] + list(enemies)
         self._enemy_count = len(enemies)
         self._thing_got = 1
+        self._reward_placed = False

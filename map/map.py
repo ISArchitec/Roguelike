@@ -66,12 +66,11 @@ class Map(IMap):
         if cell is not None and not cell.is_wall():
             self._hit_cell(cell, force)
 
-    def add_object(self, obj: ICellObject) -> None:
+    def add_object(self, obj: ICellObject) -> bool:
         cell = self._get_cell(obj.get_position())
         if cell is None or cell.is_wall():
-            raise ValueError("Object must be placed inside the map, outside walls")
-        if not cell.add_cell_object(obj):
-            raise ValueError("Cell is already occupied")
+            return False
+        return cell.add_cell_object(obj)
 
     def is_valid_position(self, position: Position) -> bool:
         return (position is not None
