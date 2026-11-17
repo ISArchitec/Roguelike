@@ -1,6 +1,7 @@
 from collections import deque
 
-from game import ActorParams, IEvent, IActor
+from game import ActorParams, IActor
+from hero.event_interface import IEvent
 from positioning import Position, IMap, ICellObject, Direction
 from bonuses import OneTimeBonus, IDCard, Certificate
 from hero.inventory import Inventory
@@ -51,7 +52,7 @@ class Hero(IActor, ICellObject):
     def step(self):
         for i in range(self._params.speed):
             event = self._event_queue.popleft()
-            event.accept_actor(self)
+            event.accept_hero(self)
 
     # Inventory handling
 

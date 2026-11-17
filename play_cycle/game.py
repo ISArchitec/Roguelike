@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 from random import randrange, sample
 
 from bonuses import OneTimeBonus
-from game import IActor, IEvent
+from game import IActor
 from generation import ILevelGenerator
-from hero import Hero
+from hero import Hero, IEvent
 from map import Map
 from monsters import IEnemy
 from play_cycle import GlobalConfig, IModelSubscriber
