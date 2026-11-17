@@ -62,9 +62,10 @@ class Game:
                 self._console.on_lost()
                 return
             if self.has_won_level():
-                self._console.on_won()
                 if self.has_won_totally():
+                    self._console.on_total_won()
                     return
+                self._console.on_won()
                 self._advance_level()
             elif self._enemy_count == 0 and not self._reward_placed:
                 self._place_level_reward()

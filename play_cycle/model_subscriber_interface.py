@@ -13,6 +13,10 @@ class IModelSubscriber(ABC):
         pass
 
     @abstractmethod
+    def on_total_won(self) -> None:
+        pass
+
+    @abstractmethod
     def on_lost(self) -> None:
         pass
 
