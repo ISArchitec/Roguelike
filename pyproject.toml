@@ -1,0 +1,22 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "area_attacks", "bonuses", "game", "generation", "hero", "map",
+    "monster_strategies", "monsters", "play_cycle", "positioning", "serializing",
+]
+
+[tool.pyright]
+pythonVersion = "3.13"
+include = ["."]
+exclude = [".venv", "**/__pycache__"]
+typeCheckingMode = "standard"

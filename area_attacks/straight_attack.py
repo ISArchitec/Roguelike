@@ -1,5 +1,5 @@
 from game import IAreaAttack
-from positioning import IMap, Position, Direction
+from positioning import Direction, IMap, Position
 
 
 class StraightAttack(IAreaAttack):
@@ -8,10 +8,17 @@ class StraightAttack(IAreaAttack):
         self._force = force
         self._direction = direction
 
+    def get_length(self) -> int:
+        return self._length
+
+    def get_force(self) -> int:
+        return self._force
+
+    def get_direction(self) -> Direction:
+        return self._direction
+
     def special_attack(self, map: IMap, position: Position):
-        x = position.get_x()
-        y = position.get_y()
         target_position = position
-        for i in range(self._length):
+        for _i in range(self._length):
             target_position = target_position.move(self._direction)
             map.interact_direct(target_position, self._force)

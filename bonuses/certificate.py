@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 from game import ActorParams
-from positioning import Position, ICellObject
+from positioning import ICellObject, Position
 
 
 class Certificate(ICellObject):
@@ -10,8 +10,11 @@ class Certificate(ICellObject):
         self._position = None
         self._on_pickup: Callable[[], None] | None = None
 
-    def get_position(self) -> Position:
+    def get_position(self) -> Position | None:
         return self._position
+
+    def get_params(self) -> ActorParams:
+        return self._params
 
     def set_position(self, position: Position) -> None:
         self._position = position

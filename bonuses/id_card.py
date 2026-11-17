@@ -1,11 +1,13 @@
 from collections.abc import Callable
 
 from game import IAreaAttack
-from positioning import Position, ICellObject, IMap
+from positioning import ICellObject, IMap, Position
 
 
 class IDCard(ICellObject):
-    def __init__(self, attack: IAreaAttack, timeout: int, position: Position, tick_since: int):
+    def __init__(
+        self, attack: IAreaAttack, timeout: int, position: Position | None, tick_since: int
+    ):
         self._attack = attack
         self._timeout = timeout
         self._position = position
@@ -13,8 +15,17 @@ class IDCard(ICellObject):
         self._tick_getter: Callable[[], int] | None = None
         self._on_pickup: Callable[[], None] | None = None
 
-    def get_position(self) -> Position:
+    def get_position(self) -> Position | None:
         return self._position
+
+    def get_attack(self) -> IAreaAttack:
+        return self._attack
+
+    def get_timeout(self) -> int:
+        return self._timeout
+
+    def get_tick_since(self) -> int:
+        return self._tick_since
 
     def set_position(self, position: Position) -> None:
         self._position = position

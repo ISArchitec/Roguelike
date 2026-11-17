@@ -8,6 +8,8 @@ from play_cycle import IModelSubscriber
 
 class ILevelGenerator(ABC):
     @abstractmethod
-    def generate_level(self, section_number: int, hero: Hero, console: IModelSubscriber) -> tuple[Map, list[IEnemy], bool]:
+    def generate_level(
+        self, section_number: int, hero: Hero, console: IModelSubscriber
+    ) -> tuple[Map, list[IEnemy], bool]:
         # Последний элемент результата указывает, завершает ли созданный уровень секцию.
         pass

@@ -1,9 +1,16 @@
-from bonuses import IDCard, Certificate, OneTimeBonus
+from collections.abc import Iterator
+
+from bonuses import Certificate, IDCard, OneTimeBonus
 
 
 class Inventory:
-    def __init__(self, one_timers: list[OneTimeBonus], id_cards: list[IDCard], current_id: IDCard | None,
-                 certificates: list[Certificate]):
+    def __init__(
+        self,
+        one_timers: list[OneTimeBonus],
+        id_cards: list[IDCard],
+        current_id: IDCard | None,
+        certificates: list[Certificate],
+    ):
         self._one_timers = one_timers.copy()
         self._id_cards = id_cards.copy()
         self._current_id = current_id
@@ -14,6 +21,9 @@ class Inventory:
 
     def get_id_cards(self):
         return iter(self._id_cards)
+
+    def get_certificates(self) -> Iterator[Certificate]:
+        return iter(self._certificates)
 
     def get_current_id_card(self) -> IDCard | None:
         return self._current_id

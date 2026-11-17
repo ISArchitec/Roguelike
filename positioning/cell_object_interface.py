@@ -5,7 +5,7 @@ from positioning.position import Position
 
 class ICellObject(ABC):
     @abstractmethod
-    def get_position(self) -> Position:
+    def get_position(self) -> Position | None:
         pass
 
     @abstractmethod
