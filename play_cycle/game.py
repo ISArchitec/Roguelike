@@ -67,7 +67,6 @@ class Game:
         return self._enemy_count == 0 and self._thing_got == 0
 
     def has_lost_level(self) -> bool:
-        # TODO: Hero.is_inactive() пока всегда возвращает True; завершить проверку смерти в самом Hero.
         return self._hero.is_inactive()
 
     def has_won_totally(self) -> bool:
