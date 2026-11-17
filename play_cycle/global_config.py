@@ -48,11 +48,23 @@ class GlobalConfig:
     def get_boss_prizes(self, index: int) -> IDCard:
         return self._boss_id_cards[index]
 
+    def get_boss_prize_pool_size(self) -> int:
+        return len(self._boss_id_cards)
+
     def get_certificate(self, index: int) -> Certificate:
         return self._certificates[index]
 
+    def get_certificate_pool_size(self) -> int:
+        return len(self._certificates)
+
     def get_special_thing(self, index: int) -> OneTimeBonus:
         return self._initial_thing_pool[index]
+
+    def get_initial_thing_count(self) -> int:
+        return self._initial_thing_count
+
+    def get_initial_thing_pool_size(self) -> int:
+        return len(self._initial_thing_pool)
 
     def _load(self, path: Path) -> None:
         with path.open(encoding="utf-8") as stream:
@@ -79,6 +91,9 @@ class GlobalConfig:
         self._boss_id_cards = [self._read_card(card) for card in data["boss_id_cards"]]
         self._certificates = [Certificate(self._read_params(params)) for params in data["certificates"]]
         self._initial_thing_pool = [OneTimeBonus(self._read_params(params)) for params in data["initial_thing_pool"]]
+        self._initial_thing_count = self._read_int(data["initial_thing_count"], "initial thing count", 0)
+        if self._initial_thing_count > 0 and not self._initial_thing_pool:
+            raise ValueError("Initial thing pool cannot be empty when initial thing count is positive")
 
     @staticmethod
     def _read_int(value, name: str, minimum: int | None = None) -> int:

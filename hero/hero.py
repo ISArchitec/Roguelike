@@ -8,19 +8,19 @@ from hero.inventory import Inventory
 
 class Hero(IActor, ICellObject):
     def __init__(self, params: ActorParams, position: Position, one_timers: list[OneTimeBonus],
-                 event_queue: deque[IEvent], map: IMap):
+                 event_queue: deque[IEvent]):
         self._params = params
         self._position = position
         self._one_timers = one_timers.copy()
         self._event_queue = event_queue
-        self._map = map
+        self._map: IMap | None = None
         self._inventory = Inventory(self._one_timers, [], None, [])
 
     @classmethod
     def construct_from(cls, params: ActorParams, position: Position, one_timers: list[OneTimeBonus],
                        id_cards: list[IDCard], current_id: IDCard | None, certificates: list[Certificate],
-                       event_queue: deque[IEvent], map: IMap):
-        hero = Hero(params, position, one_timers, event_queue, map)
+                       event_queue: deque[IEvent]):
+        hero = Hero(params, position, one_timers, event_queue)
         if current_id is not None:
             hero._inventory.use_id_card_direct(current_id)
         for card in id_cards:
@@ -28,6 +28,9 @@ class Hero(IActor, ICellObject):
         for certificate in certificates:
             hero._inventory.add_certificate(certificate)
         return hero
+
+    def set_map(self, map: IMap) -> None:
+        self._map = map
 
     # Cell object methods
 
@@ -87,11 +90,15 @@ class Hero(IActor, ICellObject):
     # Actions
 
     def try_move(self, direction: Direction) -> bool:
+        if self._map is None:
+            raise RuntimeError("Hero map has not been set")
         return self._map.move(self, direction)
 
     def special_attack(self) -> bool:
         id_card = self._inventory.get_current_id_card()
         if id_card is None:
             return False
+        if self._map is None:
+            raise RuntimeError("Hero map has not been set")
         id_card.special_attack(self._map, self._position)
         return True
