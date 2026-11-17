@@ -10,8 +10,8 @@ class Cell:
         self._is_wall = is_wall
 
     @staticmethod
-    def create_new(p: Position) -> "Cell":
-        return Cell(p)
+    def create_new(p: Position, is_wall: bool = False) -> "Cell":
+        return Cell(p, is_wall=is_wall)
 
     @staticmethod
     def create_from(p: Position, object: ICellObject | None, is_wall: bool) -> "Cell":
@@ -41,6 +41,11 @@ class Cell:
         if not self.empty():
             raise ValueError("An occupied cell cannot become a wall")
         self._is_wall = True
+
+    def remove_wall(self) -> None:
+        if not self.is_wall():
+            raise ValueError("Already no walls here")
+        self._is_wall = False
 
     def is_wall(self) -> bool:
         return self._is_wall
