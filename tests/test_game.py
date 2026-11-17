@@ -1,5 +1,5 @@
+from datetime import UTC, datetime, timedelta
 from queue import Queue
-from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -16,8 +16,7 @@ from play_cycle import GlobalConfig, IModelSubscriber
 from play_cycle.game import Game
 from positioning import Position
 
-
-SAVE_DATE = datetime(2026, 1, 2, tzinfo=timezone.utc)
+SAVE_DATE = datetime(2026, 1, 2, tzinfo=UTC)
 
 
 @pytest.fixture
@@ -46,25 +45,43 @@ def dependencies():
     generator = MagicMock(spec=ILevelGenerator)
     generator.generate_level.return_value = (game_map, [enemy], False)
     with patch("play_cycle.game.GlobalConfig.get_instance", return_value=config):
-        yield SimpleNamespace(config=config, hero=hero, enemy=enemy, game_map=game_map,
-                              console=console, generator=generator)
+        yield SimpleNamespace(
+            config=config,
+            hero=hero,
+            enemy=enemy,
+            game_map=game_map,
+            console=console,
+            generator=generator,
+        )
 
 
 @pytest.fixture
 def build_game(dependencies):
     def build(**overrides):
-        args = dict(section_passed=0, level_generator=dependencies.generator, map=dependencies.game_map,
-                    actors=[dependencies.enemy], ticks=0, hero=dependencies.hero, console=dependencies.console,
-                    enemy_count=1, thing_got=1, is_section_end=False, reward_placed=False, save_date=SAVE_DATE)
+        args = {
+            "section_passed": 0,
+            "level_generator": dependencies.generator,
+            "map": dependencies.game_map,
+            "actors": [dependencies.enemy],
+            "ticks": 0,
+            "hero": dependencies.hero,
+            "console": dependencies.console,
+            "enemy_count": 1,
+            "thing_got": 1,
+            "is_section_end": False,
+            "reward_placed": False,
+            "save_date": SAVE_DATE,
+        }
         args.update(overrides)
         return Game.create_from(**args)
+
     return build
 
 
 def test_new_game_registers_save(dependencies):
     game = Game.create_new(dependencies.generator, Queue(), dependencies.console)
     dependencies.config.register_save.assert_called_once_with(game.get_save_date())
-    assert game.get_save_date().utcoffset().total_seconds() == 0
+    assert game.get_save_date().utcoffset() == timedelta(0)
 
 
 def test_new_game_generates_first_level(dependencies):
@@ -78,7 +95,12 @@ def test_new_game_copies_initial_inventory(dependencies):
     hero = dependencies.generator.generate_level.call_args.args[1]
     bonuses = list(hero.get_one_time_bonuses())
     assert len(bonuses) == 2
-    assert len({id(bonuses[0]), id(bonuses[1]), id(dependencies.config.get_special_thing.return_value)}) == 3
+    assert (
+        len(
+            {id(bonuses[0]), id(bonuses[1]), id(dependencies.config.get_special_thing.return_value)}
+        )
+        == 3
+    )
 
 
 def test_restore_rejects_invalid_save(dependencies, build_game):
@@ -99,12 +121,16 @@ def test_rejects_negative_counters(build_game, overrides):
         build_game(**overrides)
 
 
-@pytest.mark.parametrize("enemies, reward_left, expected", [(1, 1, False), (0, 1, False), (1, 0, False), (0, 0, True)])
+@pytest.mark.parametrize(
+    "enemies, reward_left, expected", [(1, 1, False), (0, 1, False), (1, 0, False), (0, 0, True)]
+)
 def test_level_victory_requires_enemies_and_reward(build_game, enemies, reward_left, expected):
     assert build_game(enemy_count=enemies, thing_got=reward_left).has_won_level() is expected
 
 
-@pytest.mark.parametrize("section, is_end, expected", [(3, True, False), (4, False, False), (4, True, True)])
+@pytest.mark.parametrize(
+    "section, is_end, expected", [(3, True, False), (4, False, False), (4, True, True)]
+)
 def test_total_victory_requires_final_section(build_game, section, is_end, expected):
     game = build_game(section_passed=section, is_section_end=is_end, enemy_count=0, thing_got=0)
     assert game.has_won_totally() is expected
@@ -162,7 +188,9 @@ def test_victory_generates_next_level(dependencies, build_game, is_section_end, 
     dependencies.hero.step.side_effect = game.stop
     game.run_game()
     dependencies.console.on_won.assert_called_once_with()
-    dependencies.generator.generate_level.assert_called_once_with(next_section, dependencies.hero, dependencies.console)
+    dependencies.generator.generate_level.assert_called_once_with(
+        next_section, dependencies.hero, dependencies.console
+    )
 
 
 def test_next_level_replaces_map_and_enemies(dependencies, build_game):
@@ -192,6 +220,7 @@ def test_termination_callback_counts_enemy_then_reward(dependencies, build_game)
     terminate()
     assert game.has_won_level()
 
+
 def test_reward_placement_retries_busy_cell(dependencies, build_game):
     dependencies.game_map.add_object.side_effect = [False, True]
     game = build_game(enemy_count=0)
@@ -202,9 +231,11 @@ def test_reward_placement_retries_busy_cell(dependencies, build_game):
 
 def test_reward_is_placed_only_once(dependencies, build_game):
     game = build_game(enemy_count=0)
+
     def stop_after_two_ticks():
         if game.get_ticks() == 1:
             game.stop()
+
     dependencies.hero.step.side_effect = stop_after_two_ticks
     game.run_game()
     dependencies.game_map.add_object.assert_called_once()

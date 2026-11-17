@@ -19,7 +19,7 @@ class IMap(ABC):
         pass
 
     @abstractmethod
-    def is_valid_position(self, position: Position):
+    def is_valid_position(self, position: Position | None) -> bool:
         pass
 
     @abstractmethod
@@ -27,5 +27,5 @@ class IMap(ABC):
         pass
 
     @abstractmethod
-    def find_path_to_hero(self, position: Position) -> list[Direction]:
+    def find_path_to_hero(self, position: Position | None) -> list[Direction]:
         pass

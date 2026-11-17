@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from hero import Hero
-from map import Map, MapBuilder
+from map import MapBuilder
 from play_cycle import IModelSubscriber
 from positioning import ICellObject, Position
 
@@ -47,7 +47,9 @@ def test_new(width, height, valid):
     [
         pytest.param("wall", "Wall cannot be placed in a wall", id="existing-wall"),
         pytest.param("empty-passage", None, id="empty-passage"),
-        pytest.param("occupied-passage", "An occupied cell cannot become a wall", id="occupied-passage"),
+        pytest.param(
+            "occupied-passage", "An occupied cell cannot become a wall", id="occupied-passage"
+        ),
     ],
 )
 def test_add_passage(state, error):
@@ -65,7 +67,11 @@ def test_add_passage(state, error):
     else:
         builder.add_passage(position)
 
-    expected_error = "Cell is already occupied" if state == "occupied-passage" else "Object cannot be placed in a wall"
+    expected_error = (
+        "Cell is already occupied"
+        if state == "occupied-passage"
+        else "Object cannot be placed in a wall"
+    )
     with pytest.raises(ValueError, match=expected_error):
         builder.add_object(make_object(position))
 
@@ -94,7 +100,9 @@ def test_add_object(state, error):
     else:
         builder.add_object(obj)
 
-    expected_error = "Object cannot be placed in a wall" if state == "wall" else "Cell is already occupied"
+    expected_error = (
+        "Object cannot be placed in a wall" if state == "wall" else "Cell is already occupied"
+    )
     with pytest.raises(ValueError, match=expected_error):
         builder.add_object(make_object(Position(2, 1)))
 
@@ -112,11 +120,14 @@ def test_add_object(state, error):
 )
 def test_reject_outside_position(method, position):
     builder = MapBuilder.new(3, 2)
-    argument = position if method == "add_passage" else make_object(position, Hero if method == "add_hero" else ICellObject)
+    argument = (
+        position
+        if method == "add_passage"
+        else make_object(position, Hero if method == "add_hero" else ICellObject)
+    )
 
     with pytest.raises(ValueError, match="Position is outside the map"):
         getattr(builder, method)(argument)
-
 
 
 @pytest.mark.parametrize(

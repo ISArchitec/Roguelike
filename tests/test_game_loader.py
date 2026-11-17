@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from queue import Queue
 from unittest.mock import MagicMock, patch
@@ -24,8 +24,9 @@ from serializing.save_data import SaveDataCodec
 
 @pytest.fixture
 def game():
-    hero = Hero(ActorParams(20, 1, 4, 1), Position(0, 0),
-                [OneTimeBonus(ActorParams(2, 0, 0, 0))], Queue())
+    hero = Hero(
+        ActorParams(20, 1, 4, 1), Position(0, 0), [OneTimeBonus(ActorParams(2, 0, 0, 0))], Queue()
+    )
     card = IDCard(CircleAttack(1, 5), 4, Position(0, 0), 8)
     hero.add_id_card(card)
     hero.use_id_card(0)
@@ -37,19 +38,38 @@ def game():
     game_map = Map.create_from(3, 2, cells, hero, console)
     hero.set_map(game_map)
     enemy = Monster(ActorParams(10, 0, 3, 1), Position(1, 0), game_map, SimpleMonsterStrategy())
-    boss = BossMonster(ActorParams(15, 1, 3, 1), Position(2, 0), game_map, SimpleMonsterStrategy(),
-                       WaveAttack([3, 2]))
+    boss = BossMonster(
+        ActorParams(15, 1, 3, 1),
+        Position(2, 0),
+        game_map,
+        SimpleMonsterStrategy(),
+        WaveAttack([3, 2]),
+    )
     game_map.add_object(enemy)
     game_map.add_object(boss)
-    return Game(1, MagicMock(spec=ILevelGenerator), game_map, [enemy, boss], 10, hero, console,
-                2, 1, False, False, datetime(2026, 1, 1, tzinfo=timezone.utc))
+    return Game(
+        1,
+        MagicMock(spec=ILevelGenerator),
+        game_map,
+        [enemy, boss],
+        10,
+        hero,
+        console,
+        2,
+        1,
+        False,
+        False,
+        datetime(2026, 1, 1, tzinfo=UTC),
+    )
 
 
 def _load(data, game):
     config = MagicMock(spec=GlobalConfig)
     config.is_save_actual.return_value = True
     with patch("play_cycle.game.GlobalConfig.get_instance", return_value=config):
-        return GameLoader.load_from(data, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator())
+        return GameLoader.load_from(
+            data, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
+        )
 
 
 def test_round_trip_preserves_shared_objects_and_inventory(game, tmp_path):
@@ -59,6 +79,7 @@ def test_round_trip_preserves_shared_objects_and_inventory(game, tmp_path):
     restored = _load(data, game)
     cells = restored.get_map().get_cells()
     hero, enemy, boss = restored.get_actors()
+    assert isinstance(hero, Hero)
     assert [cell.get_object() for cell in cells[:3]] == [hero, enemy, boss]
     assert restored.get_map().get_hero() is hero
     assert restored.get_ticks() == 10
@@ -66,7 +87,7 @@ def test_round_trip_preserves_shared_objects_and_inventory(game, tmp_path):
     assert hero.get_params().attack == 5
     assert len(list(hero.get_one_time_bonuses())) == 1
     assert len(list(hero.get_certificates())) == 1
-    assert hero.get_current_id_card() is list(hero.get_id_cards())[0]
+    assert hero.get_current_id_card() is next(iter(hero.get_id_cards()))
     assert not hero.special_attack()
 
 
@@ -88,6 +109,7 @@ def test_restores_actor_no_longer_on_map(game):
     game.get_map().get_cells()[1].remove_cell_object(enemy)
     restored = _load(GameLoader.save_to(game), game)
     restored_enemy = restored.get_actors()[1]
+    assert isinstance(restored_enemy, Monster)
     assert restored_enemy.is_inactive()
     assert (restored_enemy.get_position().get_x(), restored_enemy.get_position().get_y()) == (1, 0)
     assert restored.get_map().get_cells()[1].empty()
@@ -107,7 +129,10 @@ def test_enemies_are_constructed_with_restored_map(game):
         maps.append(game_map)
         boss_init(self, params, position, game_map, strategy, attack)
 
-    with patch.object(Monster, "__init__", init_monster), patch.object(BossMonster, "__init__", init_boss):
+    with (
+        patch.object(Monster, "__init__", init_monster),
+        patch.object(BossMonster, "__init__", init_boss),
+    ):
         restored = _load(data, game)
     assert maps == [restored.get_map(), restored.get_map()]
 
@@ -119,8 +144,20 @@ def _game_with_reward(game, reward):
             cell.remove_cell_object(cell.get_object())
     reward.set_position(Position(0, 1))
     assert game_map.add_object(reward)
-    return Game(game.get_section_passed(), game.get_level_generator(), game_map, [], game.get_ticks(),
-                game.get_hero(), MagicMock(spec=IModelSubscriber), 0, 1, False, True, game.get_save_date())
+    return Game(
+        game.get_section_passed(),
+        game.get_level_generator(),
+        game_map,
+        [],
+        game.get_ticks(),
+        game.get_hero(),
+        MagicMock(spec=IModelSubscriber),
+        0,
+        1,
+        False,
+        True,
+        game.get_save_date(),
+    )
 
 
 def test_restored_reward_can_be_collected_after_enemies_are_defeated(game):
@@ -134,7 +171,9 @@ def test_restored_reward_can_be_collected_after_enemies_are_defeated(game):
     assert restored.get_map().get_cells()[3].empty()
 
 
-@pytest.mark.parametrize("attack", [CircleAttack(2, 4), StraightAttack(3, Direction.LEFT, 5), WaveAttack([1, 3])])
+@pytest.mark.parametrize(
+    "attack", [CircleAttack(2, 4), StraightAttack(3, Direction.LEFT, 5), WaveAttack([1, 3])]
+)
 def test_attack_round_trip(attack):
     card = IDCard(attack, 3, Position(1, 2), 5)
     data = ICellObjectLoader.save_to(card)
@@ -150,7 +189,9 @@ def test_load_from_file_restores_card_pickup_and_cooldown(game, tmp_path):
     config = MagicMock(spec=GlobalConfig)
     config.is_save_actual.return_value = True
     with patch("play_cycle.game.GlobalConfig.get_instance", return_value=config):
-        restored = GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator())
+        restored = GameLoader.load_from_file(
+            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
+        )
     restored.get_map().interact_direct(position, 0)
     hero = restored.get_hero()
     assert len(list(hero.get_id_cards())) == 2
@@ -162,7 +203,9 @@ def test_corrupted_file_is_rejected(game, tmp_path):
     path = tmp_path / "save.json"
     path.write_text("{broken", encoding="utf-8")
     with pytest.raises(json.JSONDecodeError):
-        GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator())
+        GameLoader.load_from_file(
+            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
+        )
 
 
 def test_invalid_field_type_is_rejected(game, tmp_path):
@@ -172,7 +215,9 @@ def test_invalid_field_type_is_rejected(game, tmp_path):
     data["snapshot"]["ticks"] = "ten"
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="Invalid save value"):
-        GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator())
+        GameLoader.load_from_file(
+            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
+        )
 
 
 @pytest.mark.parametrize("field", ["snapshot", "checksum"])
@@ -186,7 +231,9 @@ def test_checksum_detects_corrupted_save(game, tmp_path, field):
         data["checksum"] = "0" * len(data["checksum"])
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="checksum mismatch"):
-        GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator())
+        GameLoader.load_from_file(
+            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
+        )
 
 
 def test_save_without_checksum_is_rejected(game, tmp_path):
@@ -196,7 +243,9 @@ def test_save_without_checksum_is_rejected(game, tmp_path):
     del data["checksum"]
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="Invalid fields"):
-        GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator())
+        GameLoader.load_from_file(
+            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
+        )
 
 
 def test_cannot_load_save_after_hero_dies(game, tmp_path):
@@ -216,18 +265,26 @@ def test_cannot_load_save_after_hero_dies(game, tmp_path):
     reloaded_config = GlobalConfig(config_path)
     assert save_path.exists()
     assert not reloaded_config.is_save_actual(game.get_save_date())
-    with patch("play_cycle.game.GlobalConfig.get_instance", return_value=reloaded_config):
-        with pytest.raises(ValueError, match="no longer valid"):
-            GameLoader.load_from_file(save_path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator())
+    with (
+        patch("play_cycle.game.GlobalConfig.get_instance", return_value=reloaded_config),
+        pytest.raises(ValueError, match="no longer valid"),
+    ):
+        GameLoader.load_from_file(
+            save_path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
+        )
 
 
 def test_invalidated_save_cannot_be_loaded(game):
     data = GameLoader.save_to(game)
     config = MagicMock(spec=GlobalConfig)
     config.is_save_actual.return_value = False
-    with patch("play_cycle.game.GlobalConfig.get_instance", return_value=config):
-        with pytest.raises(ValueError, match="no longer valid"):
-            GameLoader.load_from(data, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator())
+    with (
+        patch("play_cycle.game.GlobalConfig.get_instance", return_value=config),
+        pytest.raises(ValueError, match="no longer valid"),
+    ):
+        GameLoader.load_from(
+            data, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
+        )
 
 
 def test_invalid_reference_and_version_rejected(game):
@@ -243,8 +300,10 @@ def test_invalid_reference_and_version_rejected(game):
 def test_failed_replace_preserves_previous_save(game, tmp_path):
     path = tmp_path / "save.json"
     path.write_text("previous", encoding="utf-8")
-    with patch("serializing.game_loader.os.replace", side_effect=OSError("write failed")):
-        with pytest.raises(OSError, match="write failed"):
-            GameLoader.save_to_file(game, path)
+    with (
+        patch("serializing.game_loader.os.replace", side_effect=OSError("write failed")),
+        pytest.raises(OSError, match="write failed"),
+    ):
+        GameLoader.save_to_file(game, path)
     assert path.read_text(encoding="utf-8") == "previous"
     assert list(tmp_path.iterdir()) == [path]

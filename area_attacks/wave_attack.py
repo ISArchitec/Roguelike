@@ -1,5 +1,5 @@
 from game import IAreaAttack
-from positioning import IMap, Position, Direction
+from positioning import IMap, Position
 
 
 class WaveAttack(IAreaAttack):

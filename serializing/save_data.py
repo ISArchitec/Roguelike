@@ -1,39 +1,44 @@
 from dataclasses import asdict, dataclass
-from enum import Enum
+from enum import StrEnum
 
 from area_attacks import CircleAttack, StraightAttack, WaveAttack
 from game import ActorParams, IAreaAttack
 from positioning import Direction
 
 
-class ActorType(str, Enum):
+class ActorType(StrEnum):
     """Supported actor types in a save."""
+
     HERO = "hero"
     MONSTER = "monster"
     BOSS = "boss"
 
 
-class ObjectType(str, Enum):
+class ObjectType(StrEnum):
     """Supported collectible types in a save."""
+
     CERTIFICATE = "certificate"
     ID_CARD = "id_card"
 
 
-class AttackType(str, Enum):
+class AttackType(StrEnum):
     """Supported attack types in a save."""
+
     CIRCLE = "circle"
     STRAIGHT = "straight"
     WAVE = "wave"
 
 
-class StrategyType(str, Enum):
+class StrategyType(StrEnum):
     """Supported enemy strategies in a save."""
+
     SIMPLE = "simple"
 
 
 @dataclass
 class PositionData:
     """A position on the map."""
+
     x: int
     y: int
 
@@ -41,6 +46,7 @@ class PositionData:
 @dataclass
 class ParamsData:
     """Actor statistics or item modifiers."""
+
     health: int
     defence: int
     attack: int
@@ -59,6 +65,7 @@ class ParamsData:
 @dataclass
 class AttackData:
     """Configuration of an area attack."""
+
     type: AttackType
     radius: int | None = None
     force: int | None = None
@@ -72,8 +79,12 @@ class AttackData:
         if type(attack) is CircleAttack:
             return cls(AttackType.CIRCLE, radius=attack.get_radius(), force=attack.get_force())
         if type(attack) is StraightAttack:
-            return cls(AttackType.STRAIGHT, length=attack.get_length(), force=attack.get_force(),
-                       direction=attack.get_direction().name)
+            return cls(
+                AttackType.STRAIGHT,
+                length=attack.get_length(),
+                force=attack.get_force(),
+                direction=attack.get_direction().name,
+            )
         if type(attack) is WaveAttack:
             return cls(AttackType.WAVE, forces=list(attack.get_forces()))
         raise ValueError(f"Unsupported attack type: {type(attack).__name__}")
@@ -85,7 +96,13 @@ class AttackData:
                 raise ValueError("Invalid circle attack")
             return CircleAttack(self.radius, self.force)
         if self.type is AttackType.STRAIGHT:
-            if self.length is None or self.force is None or self.direction is None or self.length < 0 or self.force < 0:
+            if (
+                self.length is None
+                or self.force is None
+                or self.direction is None
+                or self.length < 0
+                or self.force < 0
+            ):
                 raise ValueError("Invalid straight attack")
             try:
                 return StraightAttack(self.length, Direction[self.direction], self.force)
@@ -101,6 +118,7 @@ class AttackData:
 @dataclass
 class ObjectData:
     """State of a collectible map object."""
+
     type: ObjectType
     position: PositionData | None
     params: ParamsData | None = None
@@ -112,12 +130,14 @@ class ObjectData:
 @dataclass
 class BonusData:
     """State of a one-time bonus."""
+
     modifier: ParamsData
 
 
 @dataclass
 class InventoryData:
     """Hero inventory and selected ID card."""
+
     one_timers: list[BonusData]
     id_cards: list[ObjectData]
     current_id: int | None
@@ -127,6 +147,7 @@ class InventoryData:
 @dataclass
 class ActorData:
     """State of a hero or an enemy."""
+
     type: ActorType
     params: ParamsData
     position: PositionData
@@ -138,6 +159,7 @@ class ActorData:
 @dataclass
 class CellData:
     """A map cell and its contents."""
+
     wall: bool
     actor_index: int | None = None
     object: ObjectData | None = None
@@ -146,6 +168,7 @@ class CellData:
 @dataclass
 class MapData:
     """Map dimensions and ordered cells."""
+
     width: int
     height: int
     cells: list[CellData]
@@ -154,6 +177,7 @@ class MapData:
 @dataclass
 class GameData:
     """Complete versioned game snapshot."""
+
     version: int
     generator: None
     section_passed: int
@@ -170,6 +194,7 @@ class GameData:
 @dataclass
 class SaveFileData:
     """A game snapshot and its checksum."""
+
     snapshot: GameData
     checksum: str
 
@@ -187,22 +212,31 @@ class SaveDataCodec:
         """Validate and decode a save file envelope."""
         try:
             SaveDataCodec._fields(data, {"snapshot", "checksum"})
-            return SaveFileData(SaveDataCodec._game(data["snapshot"]),
-                                SaveDataCodec._string(data["checksum"]))
+            return SaveFileData(
+                SaveDataCodec._game(data["snapshot"]), SaveDataCodec._string(data["checksum"])
+            )
         except (KeyError, TypeError, AttributeError) as error:
             raise ValueError("Invalid save data") from error
 
     @staticmethod
     def _omit_none(value):
         if isinstance(value, dict):
-            return {key: SaveDataCodec._omit_none(item) for key, item in value.items() if item is not None}
+            return {
+                key: SaveDataCodec._omit_none(item)
+                for key, item in value.items()
+                if item is not None
+            }
         if isinstance(value, list):
             return [SaveDataCodec._omit_none(item) for item in value]
         return value
 
     @staticmethod
     def _fields(data, required: set[str], optional: frozenset[str] = frozenset()) -> None:
-        if not isinstance(data, dict) or not required <= data.keys() or data.keys() - required - optional:
+        if (
+            not isinstance(data, dict)
+            or not required <= data.keys()
+            or data.keys() - required - optional
+        ):
             raise ValueError("Invalid fields in save data")
 
     @staticmethod
@@ -242,7 +276,9 @@ class SaveDataCodec:
 
     @staticmethod
     def _attack(data) -> AttackData:
-        SaveDataCodec._fields(data, {"type"}, frozenset({"radius", "force", "length", "direction", "forces"}))
+        SaveDataCodec._fields(
+            data, {"type"}, frozenset({"radius", "force", "length", "direction", "forces"})
+        )
         attack_type = AttackType(SaveDataCodec._string(data["type"]))
         required = {
             AttackType.CIRCLE: {"type", "radius", "force"},
@@ -250,25 +286,37 @@ class SaveDataCodec:
             AttackType.WAVE: {"type", "forces"},
         }
         SaveDataCodec._fields(data, required[attack_type])
-        return AttackData(attack_type,
-                          radius=SaveDataCodec._integer(data["radius"]) if "radius" in data else None,
-                          force=SaveDataCodec._integer(data["force"]) if "force" in data else None,
-                          length=SaveDataCodec._integer(data["length"]) if "length" in data else None,
-                          direction=SaveDataCodec._string(data["direction"]) if "direction" in data else None,
-                          forces=SaveDataCodec._list(data["forces"], SaveDataCodec._integer) if "forces" in data else None)
+        return AttackData(
+            attack_type,
+            radius=SaveDataCodec._integer(data["radius"]) if "radius" in data else None,
+            force=SaveDataCodec._integer(data["force"]) if "force" in data else None,
+            length=SaveDataCodec._integer(data["length"]) if "length" in data else None,
+            direction=SaveDataCodec._string(data["direction"]) if "direction" in data else None,
+            forces=SaveDataCodec._list(data["forces"], SaveDataCodec._integer)
+            if "forces" in data
+            else None,
+        )
 
     @staticmethod
     def _item(data) -> ObjectData:
-        SaveDataCodec._fields(data, {"type"}, frozenset({"position", "params", "attack", "timeout", "tick_since"}))
+        SaveDataCodec._fields(
+            data, {"type"}, frozenset({"position", "params", "attack", "timeout", "tick_since"})
+        )
         kind = ObjectType(SaveDataCodec._string(data["type"]))
-        required = {"type", "params"} if kind is ObjectType.CERTIFICATE else {"type", "attack", "timeout", "tick_since"}
+        required = (
+            {"type", "params"}
+            if kind is ObjectType.CERTIFICATE
+            else {"type", "attack", "timeout", "tick_since"}
+        )
         SaveDataCodec._fields(data, required, frozenset({"position"}))
-        return ObjectData(kind,
-                          SaveDataCodec._position(data["position"]) if "position" in data else None,
-                          params=SaveDataCodec._params(data["params"]) if "params" in data else None,
-                          attack=SaveDataCodec._attack(data["attack"]) if "attack" in data else None,
-                          timeout=SaveDataCodec._integer(data["timeout"]) if "timeout" in data else None,
-                          tick_since=SaveDataCodec._integer(data["tick_since"]) if "tick_since" in data else None)
+        return ObjectData(
+            kind,
+            SaveDataCodec._position(data["position"]) if "position" in data else None,
+            params=SaveDataCodec._params(data["params"]) if "params" in data else None,
+            attack=SaveDataCodec._attack(data["attack"]) if "attack" in data else None,
+            timeout=SaveDataCodec._integer(data["timeout"]) if "timeout" in data else None,
+            tick_since=SaveDataCodec._integer(data["tick_since"]) if "tick_since" in data else None,
+        )
 
     @staticmethod
     def _bonus(data) -> BonusData:
@@ -277,11 +325,15 @@ class SaveDataCodec:
 
     @staticmethod
     def _inventory(data) -> InventoryData:
-        SaveDataCodec._fields(data, {"one_timers", "id_cards", "certificates"}, frozenset({"current_id"}))
-        return InventoryData(SaveDataCodec._list(data["one_timers"], SaveDataCodec._bonus),
-                             SaveDataCodec._list(data["id_cards"], SaveDataCodec._item),
-                             SaveDataCodec._integer(data["current_id"]) if "current_id" in data else None,
-                             SaveDataCodec._list(data["certificates"], SaveDataCodec._item))
+        SaveDataCodec._fields(
+            data, {"one_timers", "id_cards", "certificates"}, frozenset({"current_id"})
+        )
+        return InventoryData(
+            SaveDataCodec._list(data["one_timers"], SaveDataCodec._bonus),
+            SaveDataCodec._list(data["id_cards"], SaveDataCodec._item),
+            SaveDataCodec._integer(data["current_id"]) if "current_id" in data else None,
+            SaveDataCodec._list(data["certificates"], SaveDataCodec._item),
+        )
 
     @staticmethod
     def _actor(data) -> ActorData:
@@ -292,32 +344,62 @@ class SaveDataCodec:
         if kind is ActorType.BOSS:
             required.add("attack")
         SaveDataCodec._fields(data, required)
-        return ActorData(kind, SaveDataCodec._params(data["params"]), SaveDataCodec._position(data["position"]),
-                         inventory=SaveDataCodec._inventory(data["inventory"]) if "inventory" in data else None,
-                         strategy=StrategyType(SaveDataCodec._string(data["strategy"])) if "strategy" in data else None,
-                         attack=SaveDataCodec._attack(data["attack"]) if "attack" in data else None)
+        return ActorData(
+            kind,
+            SaveDataCodec._params(data["params"]),
+            SaveDataCodec._position(data["position"]),
+            inventory=SaveDataCodec._inventory(data["inventory"]) if "inventory" in data else None,
+            strategy=StrategyType(SaveDataCodec._string(data["strategy"]))
+            if "strategy" in data
+            else None,
+            attack=SaveDataCodec._attack(data["attack"]) if "attack" in data else None,
+        )
 
     @staticmethod
     def _cell(data) -> CellData:
         SaveDataCodec._fields(data, {"wall"}, frozenset({"actor_index", "object"}))
-        return CellData(SaveDataCodec._boolean(data["wall"]),
-                        actor_index=SaveDataCodec._integer(data["actor_index"]) if "actor_index" in data else None,
-                        object=SaveDataCodec._item(data["object"]) if "object" in data else None)
+        return CellData(
+            SaveDataCodec._boolean(data["wall"]),
+            actor_index=SaveDataCodec._integer(data["actor_index"])
+            if "actor_index" in data
+            else None,
+            object=SaveDataCodec._item(data["object"]) if "object" in data else None,
+        )
 
     @staticmethod
     def _map(data) -> MapData:
         SaveDataCodec._fields(data, {"width", "height", "cells"})
-        return MapData(SaveDataCodec._integer(data["width"]), SaveDataCodec._integer(data["height"]),
-                       SaveDataCodec._list(data["cells"], SaveDataCodec._cell))
+        return MapData(
+            SaveDataCodec._integer(data["width"]),
+            SaveDataCodec._integer(data["height"]),
+            SaveDataCodec._list(data["cells"], SaveDataCodec._cell),
+        )
 
     @staticmethod
     def _game(data) -> GameData:
-        required = {"version", "section_passed", "ticks", "enemy_count", "thing_got", "is_section_end",
-                    "reward_placed", "save_date", "actors", "map"}
+        required = {
+            "version",
+            "section_passed",
+            "ticks",
+            "enemy_count",
+            "thing_got",
+            "is_section_end",
+            "reward_placed",
+            "save_date",
+            "actors",
+            "map",
+        }
         SaveDataCodec._fields(data, required)
-        return GameData(SaveDataCodec._integer(data["version"]), None,
-                        SaveDataCodec._integer(data["section_passed"]), SaveDataCodec._integer(data["ticks"]),
-                        SaveDataCodec._integer(data["enemy_count"]), SaveDataCodec._integer(data["thing_got"]),
-                        SaveDataCodec._boolean(data["is_section_end"]), SaveDataCodec._boolean(data["reward_placed"]),
-                        SaveDataCodec._string(data["save_date"]), SaveDataCodec._list(data["actors"], SaveDataCodec._actor),
-                        SaveDataCodec._map(data["map"]))
+        return GameData(
+            SaveDataCodec._integer(data["version"]),
+            None,
+            SaveDataCodec._integer(data["section_passed"]),
+            SaveDataCodec._integer(data["ticks"]),
+            SaveDataCodec._integer(data["enemy_count"]),
+            SaveDataCodec._integer(data["thing_got"]),
+            SaveDataCodec._boolean(data["is_section_end"]),
+            SaveDataCodec._boolean(data["reward_placed"]),
+            SaveDataCodec._string(data["save_date"]),
+            SaveDataCodec._list(data["actors"], SaveDataCodec._actor),
+            SaveDataCodec._map(data["map"]),
+        )

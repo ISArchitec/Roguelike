@@ -29,6 +29,8 @@ class CellLoader:
             obj = ICellObjectLoader.load_from(data.object)
         if obj is not None:
             obj_position = obj.get_position()
-            if obj_position is None or PositionLoader.save_to(obj_position) != PositionLoader.save_to(position):
+            if obj_position is None or PositionLoader.save_to(
+                obj_position
+            ) != PositionLoader.save_to(position):
                 raise ValueError("Object position does not match its cell")
         return Cell.create_from(position, obj, data.wall)

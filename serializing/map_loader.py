@@ -1,8 +1,10 @@
+from typing import cast
+
 from game import IActor
 from hero import Hero
 from map import Map
 from play_cycle import IModelSubscriber
-from positioning import Position
+from positioning import ICellObject, Position
 from serializing.cell_loader import CellLoader
 from serializing.save_data import MapData
 
@@ -18,15 +20,19 @@ class MapLoader:
         for index, cell in enumerate(cells):
             if (cell.position.get_x(), cell.position.get_y()) != (index % width, index // width):
                 raise ValueError("Invalid cell position")
-        return MapData(width, game_map.get_height(), [CellLoader.save_to(cell, actors) for cell in cells])
+        return MapData(
+            width, game_map.get_height(), [CellLoader.save_to(cell, actors) for cell in cells]
+        )
 
     @staticmethod
     def load_from(data: MapData, hero: Hero, console: IModelSubscriber) -> Map:
         """Restore the map before constructing its enemies."""
         if data.width <= 0 or data.height <= 0 or len(data.cells) != data.width * data.height:
             raise ValueError("Invalid map dimensions")
-        cells = [CellLoader.load_from(cell, Position(index % data.width, index // data.width))
-                 for index, cell in enumerate(data.cells)]
+        cells = [
+            CellLoader.load_from(cell, Position(index % data.width, index // data.width))
+            for index, cell in enumerate(data.cells)
+        ]
         return Map.create_from(data.width, data.height, cells, hero, console)
 
     @staticmethod
@@ -40,9 +46,12 @@ class MapLoader:
                 actor_index = cell_data.actor_index
                 if not 0 <= actor_index < len(actors) or actor_index in seen:
                     raise ValueError("Invalid actor reference")
-                actor = actors[actor_index]
-                position = actor.get_position()
-                if (position.get_x(), position.get_y()) != (index % data.width, index // data.width):
+                actor = cast(ICellObject, actors[actor_index])
+                position = cast(Position, actor.get_position())
+                if (position.get_x(), position.get_y()) != (
+                    index % data.width,
+                    index // data.width,
+                ):
                     raise ValueError("Actor position does not match its cell")
                 if not game_map.add_object(actor):
                     raise ValueError("Cannot place actor on the map")

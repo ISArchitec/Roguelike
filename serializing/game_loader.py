@@ -1,7 +1,7 @@
 import json
 import os
-from hashlib import sha256
 from datetime import datetime
+from hashlib import sha256
 from pathlib import Path
 from queue import Queue
 from tempfile import NamedTemporaryFile
@@ -15,7 +15,6 @@ from serializing.actor_loader import IActorLoader
 from serializing.generator_loader import RandomLevelGeneratorLoader
 from serializing.map_loader import MapLoader
 from serializing.save_data import GameData, SaveDataCodec, SaveFileData
-
 
 _SAVE_VERSION = 1
 _HERO_INDEX = 0
@@ -50,8 +49,12 @@ class GameLoader:
         )
 
     @staticmethod
-    def load_from(data: GameData, event_queue: Queue[IEvent], console: IModelSubscriber,
-                  generator: ILevelGenerator) -> Game:
+    def load_from(
+        data: GameData,
+        event_queue: Queue[IEvent],
+        console: IModelSubscriber,
+        generator: ILevelGenerator,
+    ) -> Game:
         """Restore a game using the supplied queue, subscriber and generator."""
         GameLoader._validate_game(data)
         generator = RandomLevelGeneratorLoader.load_from(data.generator, generator)
@@ -62,13 +65,26 @@ class GameLoader:
             raise ValueError("Invalid hero in actor list")
         game_map = MapLoader.load_from(data.map, hero, console)
         hero.set_map(game_map)
-        actors = [hero] + [IActorLoader.load_from(actor, event_queue, game_map) for actor in data.actors[1:]]
+        actors = [hero] + [
+            IActorLoader.load_from(actor, event_queue, game_map) for actor in data.actors[1:]
+        ]
         if any(type(actor) is Hero for actor in actors[1:]):
             raise ValueError("Invalid hero in actor list")
         MapLoader.place_actors(data.map, game_map, actors)
-        game = Game.create_from(data.section_passed, generator, game_map, actors[1:], data.ticks,
-                                actors[_HERO_INDEX], console, data.enemy_count, data.thing_got,
-                                data.is_section_end, data.reward_placed, datetime.fromisoformat(data.save_date))
+        game = Game.create_from(
+            data.section_passed,
+            generator,
+            game_map,
+            actors[1:],
+            data.ticks,
+            hero,
+            console,
+            data.enemy_count,
+            data.thing_got,
+            data.is_section_end,
+            data.reward_placed,
+            datetime.fromisoformat(data.save_date),
+        )
         GameLoader._restore_rewards(game)
         return game
 
@@ -80,7 +96,9 @@ class GameLoader:
         data = SaveDataCodec.to_dict(SaveFileData(snapshot, GameLoader._checksum(snapshot)))
         temporary_path = None
         try:
-            with NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as stream:
+            with NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=path.parent, delete=False
+            ) as stream:
                 temporary_path = Path(stream.name)
                 json.dump(data, stream, ensure_ascii=False, indent=_JSON_INDENT)
                 stream.write("\n")
@@ -92,8 +110,12 @@ class GameLoader:
                 temporary_path.unlink(missing_ok=True)
 
     @staticmethod
-    def load_from_file(path: str | Path, event_queue: Queue[IEvent], console: IModelSubscriber,
-                       generator: ILevelGenerator) -> Game:
+    def load_from_file(
+        path: str | Path,
+        event_queue: Queue[IEvent],
+        console: IModelSubscriber,
+        generator: ILevelGenerator,
+    ) -> Game:
         """Read a JSON snapshot and restore the game."""
         with Path(path).open(encoding="utf-8") as stream:
             data = SaveDataCodec.file_from_dict(json.load(stream))
@@ -104,7 +126,9 @@ class GameLoader:
     @staticmethod
     def _checksum(snapshot: GameData) -> str:
         data = SaveDataCodec.to_dict(snapshot)
-        serialized = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+        serialized = json.dumps(
+            data, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+        )
         return sha256(serialized.encode("utf-8")).hexdigest()
 
     @staticmethod

@@ -6,8 +6,12 @@ class ActorParams:
         self.speed = speed
 
     def __add__(self, other):
-        return ActorParams(self.health + other.health, self.defence + other.defence, self.attack + other.attack,
-                           self.speed + other.speed)
+        return ActorParams(
+            self.health + other.health,
+            self.defence + other.defence,
+            self.attack + other.attack,
+            self.speed + other.speed,
+        )
 
     def get_hit(self, force: int):
         # Think about more difficult formula

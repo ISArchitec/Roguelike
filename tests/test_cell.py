@@ -1,3 +1,4 @@
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -67,9 +68,11 @@ def test_add_cell_object(is_wall, occupant, expected):
 def test_remove_cell_object(occupant, removed):
     position = Position(2, 3)
     obj = MagicMock(spec=ICellObject)
-    original = None if occupant == "empty" else obj if occupant == "same" else MagicMock(spec=ICellObject)
+    original = (
+        None if occupant == "empty" else obj if occupant == "same" else MagicMock(spec=ICellObject)
+    )
     if occupant == "equal":
-        original.__eq__.return_value = True
+        cast(MagicMock, original.__eq__).return_value = True
         assert original == obj
         assert original is not obj
     cell = Cell.create_new(position)

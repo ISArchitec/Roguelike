@@ -1,4 +1,5 @@
 from queue import Queue
+from typing import cast
 
 from bonuses import Certificate, IDCard
 from game import IActor
@@ -9,7 +10,14 @@ from positioning import IMap
 from serializing.cell_object_loader import ICellObjectLoader
 from serializing.one_time_bonus_loader import OneTimeBonusLoader
 from serializing.position_loader import PositionLoader
-from serializing.save_data import ActorData, ActorType, AttackData, InventoryData, ParamsData, StrategyType
+from serializing.save_data import (
+    ActorData,
+    ActorType,
+    AttackData,
+    InventoryData,
+    ParamsData,
+    StrategyType,
+)
 
 
 class IActorLoader:
@@ -20,19 +28,29 @@ class IActorLoader:
         """Capture the state of a supported actor."""
         if type(actor) not in (Hero, Monster, BossMonster):
             raise ValueError(f"Unsupported actor type: {type(actor).__name__}")
+        actor = cast(Hero | Monster | BossMonster, actor)
         position = PositionLoader.save_to(actor.get_position())
         params = ParamsData.from_params(actor.get_params())
-        if type(actor) is Hero:
-            return ActorData(ActorType.HERO, params, position, inventory=IActorLoader._save_inventory(actor))
+        if isinstance(actor, Hero):
+            return ActorData(
+                ActorType.HERO, params, position, inventory=IActorLoader._save_inventory(actor)
+            )
         if type(actor.get_strategy()) is not SimpleMonsterStrategy:
             raise ValueError(f"Unsupported monster strategy: {type(actor.get_strategy()).__name__}")
-        if type(actor) is BossMonster:
-            return ActorData(ActorType.BOSS, params, position, strategy=StrategyType.SIMPLE,
-                             attack=AttackData.from_attack(actor.get_attack()))
+        if isinstance(actor, BossMonster):
+            return ActorData(
+                ActorType.BOSS,
+                params,
+                position,
+                strategy=StrategyType.SIMPLE,
+                attack=AttackData.from_attack(actor.get_attack()),
+            )
         return ActorData(ActorType.MONSTER, params, position, strategy=StrategyType.SIMPLE)
 
     @staticmethod
-    def load_from(data: ActorData, event_queue: Queue[IEvent], game_map: IMap | None = None) -> IActor:
+    def load_from(
+        data: ActorData, event_queue: Queue[IEvent], game_map: IMap | None = None
+    ) -> IActor:
         """Restore an actor, using a map when restoring an enemy."""
         params = data.params.to_params()
         position = PositionLoader.load_from(data.position)
@@ -60,8 +78,10 @@ class IActorLoader:
             raise ValueError("Current card is not in the inventory")
         return InventoryData(
             [OneTimeBonusLoader.save_to(bonus) for bonus in hero.get_one_time_bonuses()],
-            [ICellObjectLoader.save_to(card) for card in cards], selected_index,
-            [ICellObjectLoader.save_to(item) for item in hero.get_certificates()])
+            [ICellObjectLoader.save_to(card) for card in cards],
+            selected_index,
+            [ICellObjectLoader.save_to(item) for item in hero.get_certificates()],
+        )
 
     @staticmethod
     def _load_hero(data, params, position, event_queue):
@@ -71,11 +91,20 @@ class IActorLoader:
             raise ValueError("Invalid card in inventory")
         if any(type(item) is not Certificate for item in certificates):
             raise ValueError("Invalid certificate in inventory")
+        cards = cast(list[IDCard], cards)
+        certificates = cast(list[Certificate], certificates)
         index = data.current_id
         if index is not None and not 0 <= index < len(cards):
             raise ValueError("Invalid current card index")
-        hero = Hero.construct_from(params, position, [OneTimeBonusLoader.load_from(item) for item in data.one_timers],
-                                   cards, None if index is None else cards[index], certificates, event_queue)
+        hero = Hero.construct_from(
+            params,
+            position,
+            [OneTimeBonusLoader.load_from(item) for item in data.one_timers],
+            cards,
+            None if index is None else cards[index],
+            certificates,
+            event_queue,
+        )
         if hero.is_inactive():
             raise ValueError("Cannot load a game after the hero has died")
         return hero

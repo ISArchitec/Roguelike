@@ -1,8 +1,7 @@
 import json
 import os
 from collections.abc import Callable, Iterator
-from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -14,11 +13,13 @@ from monster_strategies.simple_monster_strategy import SimpleMonsterStrategy
 from monsters import BossMonster, IMonsterStrategy, Monster
 from positioning import Direction, ICellObject, Position
 
+_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "configs" / "config.json"
+
 
 class GlobalConfig:
     _config: "GlobalConfig | None" = None
 
-    def __init__(self, path: str | Path = Path(__file__).resolve().parent.parent / "configs" / "config.json"):
+    def __init__(self, path: str | Path = _DEFAULT_CONFIG_PATH):
         self._path = Path(path).resolve()
         self._load(self._path)
 
@@ -75,7 +76,7 @@ class GlobalConfig:
             raise ValueError("Save date must include a timezone")
         if save_date in self._actual_saves:
             raise ValueError("Save date is already registered")
-        self._write_actual_saves(self._actual_saves | {save_date.astimezone(timezone.utc)})
+        self._write_actual_saves(self._actual_saves | {save_date.astimezone(UTC)})
 
     def is_save_actual(self, save_date: datetime) -> bool:
         return save_date in self._actual_saves
@@ -87,10 +88,14 @@ class GlobalConfig:
     def _write_actual_saves(self, actual_saves: set[datetime]) -> None:
         with self._path.open(encoding="utf-8") as stream:
             data = json.load(stream)
-        data["actual_saves"] = sorted(date.isoformat(timespec="microseconds") for date in actual_saves)
+        data["actual_saves"] = sorted(
+            date.isoformat(timespec="microseconds") for date in actual_saves
+        )
         temporary_path = None
         try:
-            with NamedTemporaryFile(mode="w", encoding="utf-8", dir=self._path.parent, delete=False) as stream:
+            with NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=self._path.parent, delete=False
+            ) as stream:
                 temporary_path = Path(stream.name)
                 json.dump(data, stream, ensure_ascii=False, indent=2)
                 stream.write("\n")
@@ -112,11 +117,16 @@ class GlobalConfig:
             save_date = datetime.fromisoformat(value)
             if save_date.tzinfo is None or save_date.utcoffset() is None:
                 raise ValueError("Save date must include a timezone")
-            self._actual_saves.add(save_date.astimezone(timezone.utc))
+            self._actual_saves.add(save_date.astimezone(UTC))
         width, height = data["map_size"]
-        self._map_size = (self._read_int(width, "map width", 1), self._read_int(height, "map height", 1))
+        self._map_size = (
+            self._read_int(width, "map width", 1),
+            self._read_int(height, "map height", 1),
+        )
         self._initial_hero_params = self._read_params(data["initial_hero_params"])
-        self._monster_param_pool = [self._read_params(params) for params in data["monster_param_pool"]]
+        self._monster_param_pool = [
+            self._read_params(params) for params in data["monster_param_pool"]
+        ]
         self._boss_param_pool = [self._read_params(params) for params in data["boss_param_pool"]]
         object_types = {
             "hero": Hero,
@@ -132,11 +142,19 @@ class GlobalConfig:
             self._object_view[object_types[name]] = view
         self._boss_strategies = {"simple": SimpleMonsterStrategy}
         self._boss_id_cards = [self._read_card(card) for card in data["boss_id_cards"]]
-        self._certificates = [Certificate(self._read_params(params)) for params in data["certificates"]]
-        self._initial_thing_pool = [OneTimeBonus(self._read_params(params)) for params in data["initial_thing_pool"]]
-        self._initial_thing_count = self._read_int(data["initial_thing_count"], "initial thing count", 0)
+        self._certificates = [
+            Certificate(self._read_params(params)) for params in data["certificates"]
+        ]
+        self._initial_thing_pool = [
+            OneTimeBonus(self._read_params(params)) for params in data["initial_thing_pool"]
+        ]
+        self._initial_thing_count = self._read_int(
+            data["initial_thing_count"], "initial thing count", 0
+        )
         if self._initial_thing_count > 0 and not self._initial_thing_pool:
-            raise ValueError("Initial thing pool cannot be empty when initial thing count is positive")
+            raise ValueError(
+                "Initial thing pool cannot be empty when initial thing count is positive"
+            )
 
     @staticmethod
     def _read_int(value, name: str, minimum: int | None = None) -> int:
@@ -146,28 +164,43 @@ class GlobalConfig:
 
     @staticmethod
     def _read_params(data: dict) -> ActorParams:
-        return ActorParams(*(GlobalConfig._read_int(data[name], name)
-                             for name in ("health", "defence", "attack", "speed")))
+        return ActorParams(
+            *(
+                GlobalConfig._read_int(data[name], name)
+                for name in ("health", "defence", "attack", "speed")
+            )
+        )
 
     @staticmethod
     def _read_attack(data: dict) -> IAreaAttack:
         match data["type"]:
             case "circle":
-                return CircleAttack(GlobalConfig._read_int(data["radius"], "attack radius", 0),
-                                    GlobalConfig._read_int(data["force"], "attack force", 0))
+                return CircleAttack(
+                    GlobalConfig._read_int(data["radius"], "attack radius", 0),
+                    GlobalConfig._read_int(data["force"], "attack force", 0),
+                )
             case "straight":
-                return StraightAttack(GlobalConfig._read_int(data["length"], "attack length", 0),
-                                      Direction[data["direction"]],
-                                      GlobalConfig._read_int(data["force"], "attack force", 0))
+                return StraightAttack(
+                    GlobalConfig._read_int(data["length"], "attack length", 0),
+                    Direction[data["direction"]],
+                    GlobalConfig._read_int(data["force"], "attack force", 0),
+                )
             case "wave":
-                return WaveAttack([GlobalConfig._read_int(force, "attack force", 0) for force in data["forces"]])
+                return WaveAttack(
+                    [GlobalConfig._read_int(force, "attack force", 0) for force in data["forces"]]
+                )
             case _:
                 raise ValueError(f"Unknown attack type: {data['type']!r}")
 
     @staticmethod
     def _read_card(data: dict) -> IDCard:
         x, y = data["position"]
-        position = Position(GlobalConfig._read_int(x, "card x", 0), GlobalConfig._read_int(y, "card y", 0))
-        return IDCard(GlobalConfig._read_attack(data["attack"]),
-                      GlobalConfig._read_int(data["timeout"], "card timeout", 0), position,
-                      GlobalConfig._read_int(data["tick_since"], "card tick", 0))
+        position = Position(
+            GlobalConfig._read_int(x, "card x", 0), GlobalConfig._read_int(y, "card y", 0)
+        )
+        return IDCard(
+            GlobalConfig._read_attack(data["attack"]),
+            GlobalConfig._read_int(data["timeout"], "card timeout", 0),
+            position,
+            GlobalConfig._read_int(data["tick_since"], "card tick", 0),
+        )

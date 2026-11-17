@@ -8,7 +8,9 @@ from positioning import Direction, ICellObject, IMap, Position
 
 
 class Map(IMap):
-    def __init__(self, width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber):
+    def __init__(
+        self, width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber
+    ):
         if width <= 0 or height <= 0:
             raise ValueError("Map dimensions must be positive")
         if len(cells) != width * height:
@@ -21,7 +23,9 @@ class Map(IMap):
         self._hero = hero
 
     @staticmethod
-    def create_from(width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber) -> "Map":
+    def create_from(
+        width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber
+    ) -> "Map":
         return Map(width, height, cells, hero, console)
 
     def set_on_terminate_object(self, callback: Callable[[], None]) -> None:
@@ -34,10 +38,13 @@ class Map(IMap):
                 continue
             if not cell.empty():
                 obj = cell.get_object()
-                self._console.draw_object(obj)
+                if obj is not None:
+                    self._console.draw_object(obj)
 
     def move(self, obj: ICellObject, direction: Direction) -> bool:
         position = obj.get_position()
+        if position is None:
+            return False
         source = self._get_cell(position)
         if source is None or not source.check_in(obj):
             return False
@@ -53,6 +60,8 @@ class Map(IMap):
 
     def interact(self, obj: ICellObject, direction: Direction, force: int) -> None:
         position = obj.get_position()
+        if position is None:
+            return
         source = self._get_cell(position)
         if source is None or not source.check_in(obj):
             return
@@ -73,10 +82,12 @@ class Map(IMap):
             return False
         return cell.add_cell_object(obj)
 
-    def is_valid_position(self, position: Position) -> bool:
-        return (position is not None
-                and 0 <= position.get_x() < self._width
-                and 0 <= position.get_y() < self._height)
+    def is_valid_position(self, position: Position | None) -> bool:
+        return (
+            position is not None
+            and 0 <= position.get_x() < self._width
+            and 0 <= position.get_y() < self._height
+        )
 
     def get_hero(self) -> Hero:
         return self._hero
@@ -93,20 +104,20 @@ class Map(IMap):
     def get_hero_position(self) -> Position:
         return self.get_hero().get_position()
 
-    def find_path_to_hero(self, position: Position) -> list[Direction]:
+    def find_path_to_hero(self, position: Position | None) -> list[Direction]:
         source = self._get_cell(position)
-        if source is None or source.is_wall():
+        if position is None or source is None or source.is_wall():
             return []
         start = self._position_index(position)
         goal = self._position_index(self.get_hero_position())
         frontier = deque([start])
-        previous = {start: None}
+        previous: dict[int, tuple[int, Direction] | None] = {start: None}
         while frontier:
             current = frontier.popleft()
             if current == goal:
                 path = []
-                while previous[current] is not None:
-                    current, direction = previous[current]
+                while (step := previous[current]) is not None:
+                    current, direction = step
                     path.append(direction)
                 path.reverse()
                 return path
@@ -125,8 +136,8 @@ class Map(IMap):
     def _position_index(self, position: Position) -> int:
         return position.get_y() * self._width + position.get_x()
 
-    def _get_cell(self, position: Position) -> Cell | None:
-        if not self.is_valid_position(position):
+    def _get_cell(self, position: Position | None) -> Cell | None:
+        if position is None or not self.is_valid_position(position):
             return None
         return self._cells[self._position_index(position)]
 

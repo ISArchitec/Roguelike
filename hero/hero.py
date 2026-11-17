@@ -1,16 +1,21 @@
-from queue import Queue
 from collections.abc import Iterator
+from queue import Queue
 
+from bonuses import Certificate, IDCard, OneTimeBonus
 from game import ActorParams, IActor
 from hero.event_interface import IEvent
-from positioning import Position, IMap, ICellObject, Direction
-from bonuses import OneTimeBonus, IDCard, Certificate
 from hero.inventory import Inventory
+from positioning import Direction, ICellObject, IMap, Position
 
 
 class Hero(IActor, ICellObject):
-    def __init__(self, params: ActorParams, position: Position, one_timers: list[OneTimeBonus],
-                 event_queue: Queue[IEvent]):
+    def __init__(
+        self,
+        params: ActorParams,
+        position: Position,
+        one_timers: list[OneTimeBonus],
+        event_queue: Queue[IEvent],
+    ):
         self._params = params
         self._position = position
         self._one_timers = one_timers.copy()
@@ -19,9 +24,16 @@ class Hero(IActor, ICellObject):
         self._inventory = Inventory(self._one_timers, [], None, [])
 
     @classmethod
-    def construct_from(cls, params: ActorParams, position: Position, one_timers: list[OneTimeBonus],
-                       id_cards: list[IDCard], current_id: IDCard | None, certificates: list[Certificate],
-                       event_queue: Queue[IEvent]):
+    def construct_from(
+        cls,
+        params: ActorParams,
+        position: Position,
+        one_timers: list[OneTimeBonus],
+        id_cards: list[IDCard],
+        current_id: IDCard | None,
+        certificates: list[Certificate],
+        event_queue: Queue[IEvent],
+    ):
         hero = Hero(params, position, one_timers, event_queue)
         if current_id is not None:
             hero._inventory.use_id_card_direct(current_id)
@@ -57,7 +69,7 @@ class Hero(IActor, ICellObject):
     # Actor methods
 
     def step(self):
-        for i in range(self._params.speed):
+        for _i in range(self._params.speed):
             event = self._event_queue.get()
             event.accept_hero(self)
 

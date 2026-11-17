@@ -11,8 +11,7 @@ class MapBuilder:
             raise ValueError("Map dimensions must be positive")
         self._width = width
         self._height = height
-        self._cells = [Cell.create_new(Position(x, y))
-                       for y in range(height) for x in range(width)]
+        self._cells = [Cell.create_new(Position(x, y)) for y in range(height) for x in range(width)]
         self._hero: Hero | None = None
 
     @staticmethod
@@ -43,8 +42,11 @@ class MapBuilder:
             raise ValueError("Hero must be added before building the map")
         return Map.create_from(self._width, self._height, self._cells, self._hero, console)
 
-    def _position_index(self, position: Position) -> int:
-        if (position is None or not 0 <= position.get_x() < self._width
-                or not 0 <= position.get_y() < self._height):
+    def _position_index(self, position: Position | None) -> int:
+        if (
+            position is None
+            or not 0 <= position.get_x() < self._width
+            or not 0 <= position.get_y() < self._height
+        ):
             raise ValueError("Position is outside the map")
         return position.get_y() * self._width + position.get_x()
