@@ -22,7 +22,8 @@ class MapBuilder:
     def add_passage(self, position: Position) -> None:
         index = self._position_index(position)
         if self._cells[index].is_wall():
-            self._cells[index] = Cell.create_new(position)
+            raise ValueError("Wall cannot be placed in a wall")
+        self._cells[index].make_wall()
 
     def add_object(self, obj: ICellObject) -> None:
         cell = self._cells[self._position_index(obj.get_position())]
