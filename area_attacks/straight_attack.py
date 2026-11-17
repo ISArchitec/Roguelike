@@ -8,6 +8,15 @@ class StraightAttack(IAreaAttack):
         self._force = force
         self._direction = direction
 
+    def get_length(self) -> int:
+        return self._length
+
+    def get_force(self) -> int:
+        return self._force
+
+    def get_direction(self) -> Direction:
+        return self._direction
+
     def special_attack(self, map: IMap, position: Position):
         x = position.get_x()
         y = position.get_y()

@@ -14,6 +14,15 @@ class Monster(IEnemy):
     def get_position(self):
         return self._position
 
+    def get_params(self) -> ActorParams:
+        return self._params
+
+    def get_strategy(self) -> IMonsterStrategy:
+        return self._strategy
+
+    def set_map(self, map: IMap):
+        self._map = map
+
     def set_position(self, position: Position) -> None:
         self._position = position
 

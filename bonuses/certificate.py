@@ -13,6 +13,9 @@ class Certificate(ICellObject):
     def get_position(self) -> Position:
         return self._position
 
+    def get_params(self) -> ActorParams:
+        return self._params
+
     def set_position(self, position: Position) -> None:
         self._position = position
 

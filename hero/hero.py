@@ -1,4 +1,5 @@
 from queue import Queue
+from collections.abc import Iterator
 
 from game import ActorParams, IActor
 from hero.event_interface import IEvent
@@ -37,6 +38,12 @@ class Hero(IActor, ICellObject):
 
     def get_position(self) -> Position:
         return self._position
+
+    def get_params(self) -> ActorParams:
+        return self._params
+
+    def get_certificates(self) -> Iterator[Certificate]:
+        return self._inventory.get_certificates()
 
     def set_position(self, position: Position) -> None:
         self._position = position

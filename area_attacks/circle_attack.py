@@ -7,6 +7,12 @@ class CircleAttack(IAreaAttack):
         self._radius = radius
         self._force = force
 
+    def get_radius(self) -> int:
+        return self._radius
+
+    def get_force(self) -> int:
+        return self._force
+
     def special_attack(self, map: IMap, position: Position):
         x = position.get_x()
         y = position.get_y()

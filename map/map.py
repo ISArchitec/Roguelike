@@ -81,6 +81,15 @@ class Map(IMap):
     def get_hero(self) -> Hero:
         return self._hero
 
+    def get_width(self) -> int:
+        return self._width
+
+    def get_height(self) -> int:
+        return self._height
+
+    def get_cells(self) -> tuple[Cell, ...]:
+        return tuple(self._cells)
+
     def get_hero_position(self) -> Position:
         return self.get_hero().get_position()
 

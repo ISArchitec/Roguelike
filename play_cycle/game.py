@@ -101,6 +101,33 @@ class Game:
         self._ticks += 1
         self._map.draw()
 
+    def get_section_passed(self) -> int:
+        return self._section_passed
+
+    def get_level_generator(self) -> ILevelGenerator:
+        return self._level_generator
+
+    def get_map(self) -> Map:
+        return self._map
+
+    def get_actors(self) -> tuple[IActor, ...]:
+        return tuple(self._actors)
+
+    def get_hero(self) -> Hero:
+        return self._hero
+
+    def get_enemy_count(self) -> int:
+        return self._enemy_count
+
+    def get_thing_got(self) -> int:
+        return self._thing_got
+
+    def get_is_section_end(self) -> bool:
+        return self._is_section_end
+
+    def get_reward_placed(self) -> bool:
+        return self._reward_placed
+
     def _count_down_on_terminate(self) -> None:
         if self._enemy_count == 0:
             if self._thing_got == 0:

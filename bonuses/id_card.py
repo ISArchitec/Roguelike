@@ -16,6 +16,15 @@ class IDCard(ICellObject):
     def get_position(self) -> Position:
         return self._position
 
+    def get_attack(self) -> IAreaAttack:
+        return self._attack
+
+    def get_timeout(self) -> int:
+        return self._timeout
+
+    def get_tick_since(self) -> int:
+        return self._tick_since
+
     def set_position(self, position: Position) -> None:
         self._position = position
 

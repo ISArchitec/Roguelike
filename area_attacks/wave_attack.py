@@ -6,6 +6,9 @@ class WaveAttack(IAreaAttack):
     def __init__(self, forces: list[int]):
         self._forces = forces.copy()
 
+    def get_forces(self) -> tuple[int, ...]:
+        return tuple(self._forces)
+
     def special_attack(self, map: IMap, position: Position):
         x = position.get_x()
         y = position.get_y()

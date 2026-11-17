@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 from bonuses import IDCard, Certificate, OneTimeBonus
 
 
@@ -14,6 +16,9 @@ class Inventory:
 
     def get_id_cards(self):
         return iter(self._id_cards)
+
+    def get_certificates(self) -> Iterator[Certificate]:
+        return iter(self._certificates)
 
     def get_current_id_card(self) -> IDCard | None:
         return self._current_id
