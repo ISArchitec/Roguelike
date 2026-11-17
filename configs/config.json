@@ -31,8 +31,7 @@
     "monster": "m",
     "boss_monster": "B",
     "certificate": "c",
-    "id_card": "i",
-    "one_time_bonus": "+"
+    "id_card": "i"
   },
   "boss_id_cards": [
     {

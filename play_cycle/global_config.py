@@ -124,7 +124,6 @@ class GlobalConfig:
             "boss_monster": BossMonster,
             "certificate": Certificate,
             "id_card": IDCard,
-            "one_time_bonus": OneTimeBonus,
         }
         self._object_view = {}
         for name, view in data["object_view"].items():

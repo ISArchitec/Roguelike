@@ -8,7 +8,7 @@
 - `map_size`: `[width, height]`, положительные целые размеры карты.
 - `initial_hero_params`: объект с целочисленными `health`, `defence`, `attack`, `speed`.
 - `monster_param_pool`, `boss_param_pool`: массивы таких объектов характеристик.
-- `object_view`: отображение типа объекта в строку для вывода. Доступные типы: `hero`, `monster`, `boss_monster`, `certificate`, `id_card`, `one_time_bonus`.
+- `object_view`: отображение типа объекта в строку для вывода. Доступные типы: `hero`, `monster`, `boss_monster`, `certificate`, `id_card`.
 - `boss_strategies`: отображение произвольного имени стратегии в её тип. Пока реализован тип `simple`. `get_boss_strategy(name)` возвращает фабрику, вызов которой создаёт новый экземпляр существующей `SimpleMonsterStrategy`.
 - `boss_id_cards`: массив удостоверений. Каждое содержит `attack`, неотрицательный целочисленный `timeout`, `position: [x, y]` с неотрицательными целыми координатами и неотрицательный целочисленный `tick_since`. Позиция и счётчик относятся к шаблону; при размещении объекта координаты задаются через `set_position`.
 - `certificates`, `initial_thing_pool`: массивы объектов характеристик для справок и одноразовых бонусов; отрицательные модификаторы допустимы.
