@@ -7,7 +7,6 @@ from queue import Queue
 from tempfile import NamedTemporaryFile
 
 from bonuses import Certificate, IDCard
-from generation import ILevelGenerator
 from hero import Hero, IEvent
 from play_cycle import IModelSubscriber
 from play_cycle.game import Game
@@ -53,11 +52,10 @@ class GameLoader:
         data: GameData,
         event_queue: Queue[IEvent],
         console: IModelSubscriber,
-        generator: ILevelGenerator,
     ) -> Game:
-        """Restore a game using the supplied queue, subscriber and generator."""
+        """Restore a game using the supplied queue and subscriber."""
         GameLoader._validate_game(data)
-        generator = RandomLevelGeneratorLoader.load_from(data.generator, generator)
+        generator = RandomLevelGeneratorLoader.load_from(data.generator)
         if not data.actors:
             raise ValueError("Invalid hero in actor list")
         hero = IActorLoader.load_from(data.actors[_HERO_INDEX], event_queue)
@@ -114,14 +112,13 @@ class GameLoader:
         path: str | Path,
         event_queue: Queue[IEvent],
         console: IModelSubscriber,
-        generator: ILevelGenerator,
     ) -> Game:
         """Read a JSON snapshot and restore the game."""
         with Path(path).open(encoding="utf-8") as stream:
             data = SaveDataCodec.file_from_dict(json.load(stream))
         if GameLoader._checksum(data.snapshot) != data.checksum:
             raise ValueError("Save checksum mismatch")
-        return GameLoader.load_from(data.snapshot, event_queue, console, generator)
+        return GameLoader.load_from(data.snapshot, event_queue, console)
 
     @staticmethod
     def _checksum(snapshot: GameData) -> str:

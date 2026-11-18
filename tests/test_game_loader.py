@@ -9,7 +9,13 @@ import pytest
 from area_attacks import CircleAttack, StraightAttack, WaveAttack
 from bonuses import Certificate, IDCard, OneTimeBonus
 from game import ActorParams
-from generation import ILevelGenerator
+from generation import (
+    BossLevelGenerator,
+    CommonLevelGenerator,
+    MonsterAttackGenerator,
+    MonsterParamsGenerator,
+    MonsterStrategyGenerator,
+)
 from hero import Hero
 from map import Cell, Map
 from monster_strategies.simple_monster_strategy import SimpleMonsterStrategy
@@ -49,7 +55,15 @@ def game():
     game_map.add_object(boss)
     return Game(
         1,
-        MagicMock(spec=ILevelGenerator),
+        CommonLevelGenerator(
+            60,
+            40,
+            (3, 3),
+            (2, 2),
+            (1, 2),
+            MonsterParamsGenerator([ActorParams(10, 1, 3, 2)]),
+            MonsterStrategyGenerator([SimpleMonsterStrategy()]),
+        ),
         game_map,
         [enemy, boss],
         10,
@@ -67,9 +81,7 @@ def _load(data, game):
     config = MagicMock(spec=GlobalConfig)
     config.is_save_actual.return_value = True
     with patch("play_cycle.game.GlobalConfig.get_instance", return_value=config):
-        return GameLoader.load_from(
-            data, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
-        )
+        return GameLoader.load_from(data, Queue(), MagicMock(spec=IModelSubscriber))
 
 
 def test_round_trip_preserves_shared_objects_and_inventory(game, tmp_path):
@@ -189,9 +201,7 @@ def test_load_from_file_restores_card_pickup_and_cooldown(game, tmp_path):
     config = MagicMock(spec=GlobalConfig)
     config.is_save_actual.return_value = True
     with patch("play_cycle.game.GlobalConfig.get_instance", return_value=config):
-        restored = GameLoader.load_from_file(
-            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
-        )
+        restored = GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber))
     restored.get_map().interact_direct(position, 0)
     hero = restored.get_hero()
     assert len(list(hero.get_id_cards())) == 2
@@ -203,9 +213,7 @@ def test_corrupted_file_is_rejected(game, tmp_path):
     path = tmp_path / "save.json"
     path.write_text("{broken", encoding="utf-8")
     with pytest.raises(json.JSONDecodeError):
-        GameLoader.load_from_file(
-            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
-        )
+        GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber))
 
 
 def test_invalid_field_type_is_rejected(game, tmp_path):
@@ -215,9 +223,7 @@ def test_invalid_field_type_is_rejected(game, tmp_path):
     data["snapshot"]["ticks"] = "ten"
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="Invalid save value"):
-        GameLoader.load_from_file(
-            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
-        )
+        GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber))
 
 
 @pytest.mark.parametrize("field", ["snapshot", "checksum"])
@@ -231,9 +237,7 @@ def test_checksum_detects_corrupted_save(game, tmp_path, field):
         data["checksum"] = "0" * len(data["checksum"])
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="checksum mismatch"):
-        GameLoader.load_from_file(
-            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
-        )
+        GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber))
 
 
 def test_save_without_checksum_is_rejected(game, tmp_path):
@@ -243,9 +247,7 @@ def test_save_without_checksum_is_rejected(game, tmp_path):
     del data["checksum"]
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="Invalid fields"):
-        GameLoader.load_from_file(
-            path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
-        )
+        GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber))
 
 
 def test_cannot_load_save_after_hero_dies(game, tmp_path):
@@ -269,9 +271,7 @@ def test_cannot_load_save_after_hero_dies(game, tmp_path):
         patch("play_cycle.game.GlobalConfig.get_instance", return_value=reloaded_config),
         pytest.raises(ValueError, match="no longer valid"),
     ):
-        GameLoader.load_from_file(
-            save_path, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
-        )
+        GameLoader.load_from_file(save_path, Queue(), MagicMock(spec=IModelSubscriber))
 
 
 def test_invalidated_save_cannot_be_loaded(game):
@@ -282,9 +282,7 @@ def test_invalidated_save_cannot_be_loaded(game):
         patch("play_cycle.game.GlobalConfig.get_instance", return_value=config),
         pytest.raises(ValueError, match="no longer valid"),
     ):
-        GameLoader.load_from(
-            data, Queue(), MagicMock(spec=IModelSubscriber), game.get_level_generator()
-        )
+        GameLoader.load_from(data, Queue(), MagicMock(spec=IModelSubscriber))
 
 
 def test_invalid_reference_and_version_rejected(game):
@@ -307,3 +305,94 @@ def test_failed_replace_preserves_previous_save(game, tmp_path):
         GameLoader.save_to_file(game, path)
     assert path.read_text(encoding="utf-8") == "previous"
     assert list(tmp_path.iterdir()) == [path]
+
+
+@pytest.fixture(params=["common", "boss"])
+def level_generator(request):
+    params = MonsterParamsGenerator([ActorParams(5, 1, 2, 3), ActorParams(8, 2, 4, 1)])
+    strategy = MonsterStrategyGenerator([SimpleMonsterStrategy()])
+    if request.param == "common":
+        return CommonLevelGenerator(60, 40, (3, 3), (2, 2), (2, 2), params, strategy)
+    attacks = MonsterAttackGenerator(
+        [CircleAttack(1, 5), StraightAttack(3, Direction.LEFT, 2), WaveAttack([4, 2])]
+    )
+    return BossLevelGenerator(11, 9, 3, params, strategy, attacks)
+
+
+def _create_game(generator):
+    console = MagicMock(spec=IModelSubscriber)
+    hero = Hero(ActorParams(20, 1, 5, 1), Position(0, 0), [], Queue())
+    cell = Cell.create_new(hero.get_position())
+    cell.add_cell_object(hero)
+    game_map = Map.create_from(1, 1, [cell], hero, console)
+    hero.set_map(game_map)
+    return Game(
+        1,
+        generator,
+        game_map,
+        [],
+        2,
+        hero,
+        console,
+        0,
+        1,
+        False,
+        False,
+        datetime(2026, 1, 1, tzinfo=UTC),
+    )
+
+
+def _generate_level(generator):
+    hero = Hero(ActorParams(20, 1, 5, 1), Position(0, 0), [], Queue())
+    console = MagicMock(spec=IModelSubscriber)
+    with (
+        patch("random.randint", side_effect=[3, 2, 2, 15, 6, 10, 1, 2, 1, 3]),
+        patch("random.choice", side_effect=lambda pool: pool[0]),
+    ):
+        game_map, enemies, is_section_end = generator.generate_level(2, hero, console)
+    return (
+        [cell.is_wall() for cell in game_map.get_cells()],
+        [(enemy.get_position(), enemy.get_params().health, type(enemy)) for enemy in enemies],
+        hero.get_position(),
+        is_section_end,
+    )
+
+
+def test_save_restores_generator_and_its_future_level(level_generator, tmp_path):
+    path = tmp_path / "save.json"
+    GameLoader.save_to_file(_create_game(level_generator), path)
+    config = MagicMock(spec=GlobalConfig)
+    config.is_save_actual.return_value = True
+    with patch("play_cycle.game.GlobalConfig.get_instance", return_value=config):
+        restored = GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber))
+    restored_generator = restored.get_level_generator()
+
+    assert type(restored_generator) is type(level_generator)
+    assert restored_generator is not level_generator
+    assert isinstance(restored_generator, (CommonLevelGenerator, BossLevelGenerator))
+    assert [
+        (params.health, params.defence, params.attack, params.speed)
+        for params in restored_generator.params_gen.params_pool
+    ] == [(5, 1, 2, 3), (8, 2, 4, 1)]
+    assert len(restored_generator.strategy_gen.strategies_pool) == 1
+    assert isinstance(restored_generator.strategy_gen.strategies_pool[0], SimpleMonsterStrategy)
+    if isinstance(restored_generator, CommonLevelGenerator):
+        assert (restored_generator.map_width, restored_generator.map_height) == (60, 40)
+        assert restored_generator.hallway_width_range == (3, 3)
+        assert restored_generator.corner_size_range == (2, 2)
+        assert restored_generator.enemies_range == (2, 2)
+    else:
+        assert (restored_generator.map_width, restored_generator.map_height) == (11, 9)
+        assert restored_generator.hallway_width == 3
+        circle, straight, wave = restored_generator.attack_gen.attack_pool
+        assert isinstance(circle, CircleAttack)
+        assert (circle.get_radius(), circle.get_force()) == (1, 5)
+        assert isinstance(straight, StraightAttack)
+        assert (straight.get_length(), straight.get_direction(), straight.get_force()) == (
+            3,
+            Direction.LEFT,
+            2,
+        )
+        assert isinstance(wave, WaveAttack)
+        assert wave.get_forces() == (4, 2)
+    assert _generate_level(restored_generator) == _generate_level(level_generator)

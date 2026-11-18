@@ -35,6 +35,13 @@ class StrategyType(StrEnum):
     SIMPLE = "simple"
 
 
+class LevelGeneratorType(StrEnum):
+    """Supported level generators in a save."""
+
+    COMMON = "common"
+    BOSS = "boss"
+
+
 @dataclass
 class PositionData:
     """A position on the map."""
@@ -175,11 +182,35 @@ class MapData:
 
 
 @dataclass
+class RangeData:
+    """Inclusive bounds used by a level generator."""
+
+    minimum: int
+    maximum: int
+
+
+@dataclass
+class GeneratorData:
+    """Configuration needed to restore a level generator."""
+
+    type: LevelGeneratorType
+    width: int
+    height: int
+    params_pool: list[ParamsData]
+    strategies_pool: list[StrategyType]
+    hallway_width: int | None = None
+    hallway_width_range: RangeData | None = None
+    corner_size_range: RangeData | None = None
+    enemies_range: RangeData | None = None
+    attacks_pool: list[AttackData] | None = None
+
+
+@dataclass
 class GameData:
     """Complete versioned game snapshot."""
 
     version: int
-    generator: None
+    generator: GeneratorData
     section_passed: int
     ticks: int
     enemy_count: int
@@ -376,9 +407,61 @@ class SaveDataCodec:
         )
 
     @staticmethod
+    def _range(data) -> RangeData:
+        SaveDataCodec._fields(data, {"minimum", "maximum"})
+        return RangeData(
+            SaveDataCodec._integer(data["minimum"]), SaveDataCodec._integer(data["maximum"])
+        )
+
+    @staticmethod
+    def _generator(data) -> GeneratorData:
+        common = {"type", "width", "height", "params_pool", "strategies_pool"}
+        optional = {
+            "hallway_width",
+            "hallway_width_range",
+            "corner_size_range",
+            "enemies_range",
+            "attacks_pool",
+        }
+        SaveDataCodec._fields(data, common, frozenset(optional))
+        kind = LevelGeneratorType(SaveDataCodec._string(data["type"]))
+        if kind is LevelGeneratorType.COMMON:
+            required = common | {"hallway_width_range", "corner_size_range", "enemies_range"}
+        else:
+            required = common | {"hallway_width", "attacks_pool"}
+        SaveDataCodec._fields(data, required)
+        return GeneratorData(
+            type=kind,
+            width=SaveDataCodec._integer(data["width"]),
+            height=SaveDataCodec._integer(data["height"]),
+            params_pool=SaveDataCodec._list(data["params_pool"], SaveDataCodec._params),
+            strategies_pool=SaveDataCodec._list(data["strategies_pool"], SaveDataCodec._strategy),
+            hallway_width=SaveDataCodec._integer(data["hallway_width"])
+            if "hallway_width" in data
+            else None,
+            hallway_width_range=SaveDataCodec._range(data["hallway_width_range"])
+            if "hallway_width_range" in data
+            else None,
+            corner_size_range=SaveDataCodec._range(data["corner_size_range"])
+            if "corner_size_range" in data
+            else None,
+            enemies_range=SaveDataCodec._range(data["enemies_range"])
+            if "enemies_range" in data
+            else None,
+            attacks_pool=SaveDataCodec._list(data["attacks_pool"], SaveDataCodec._attack)
+            if "attacks_pool" in data
+            else None,
+        )
+
+    @staticmethod
+    def _strategy(data) -> StrategyType:
+        return StrategyType(SaveDataCodec._string(data))
+
+    @staticmethod
     def _game(data) -> GameData:
         required = {
             "version",
+            "generator",
             "section_passed",
             "ticks",
             "enemy_count",
@@ -392,7 +475,7 @@ class SaveDataCodec:
         SaveDataCodec._fields(data, required)
         return GameData(
             SaveDataCodec._integer(data["version"]),
-            None,
+            SaveDataCodec._generator(data["generator"]),
             SaveDataCodec._integer(data["section_passed"]),
             SaveDataCodec._integer(data["ticks"]),
             SaveDataCodec._integer(data["enemy_count"]),
