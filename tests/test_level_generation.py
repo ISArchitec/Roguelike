@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
+from area_attacks import CircleAttack
 from game import ActorParams, IAreaAttack
 from generation import (
     BossLevelGenerator,
@@ -13,9 +14,11 @@ from generation import (
 )
 from hero import Hero
 from map import Map
+from monster_strategies.simple_monster_strategy import SimpleMonsterStrategy
 from monsters import BossMonster, IMonsterStrategy, Monster
 from play_cycle import IModelSubscriber
 from positioning import Position
+from serializing.generator_loader import RandomLevelGeneratorLoader
 
 
 def make_hero(position=(5, 5)):
@@ -28,6 +31,12 @@ def make_hero(position=(5, 5)):
 @pytest.mark.parametrize(
     "section_number, base, expected",
     [
+        pytest.param(
+            0,
+            ActorParams(10, 2, 3, 4),
+            (10, 2, 3, 4),
+            id="initial-section-keeps-base-stats",
+        ),
         pytest.param(
             1,
             ActorParams(10, 2, 3, 4),
@@ -111,7 +120,7 @@ def test_common_level_generator_builds_map_places_hero_and_spawns_enemies():
 
     with patch(
         "generation.common_level_generator.random.randint",
-        side_effect=[3, 2, 2, 15, 6, 10, 1, 2, 1, 3],
+        side_effect=[3, 2, 2, 15, 6, 10, 1, 12, 1, 13],
     ):
         game_map, enemies, section_finished = generator.generate_level(4, hero, console)
 
@@ -130,8 +139,15 @@ def test_common_level_generator_builds_map_places_hero_and_spawns_enemies():
     assert {enemy.get_params() for enemy in enemies} == {params}
     assert {enemy.get_strategy() for enemy in enemies} == {strategy}
     actual_positions = [e.get_position() for e in enemies]
-    reference_positions = [Position(1, 2), Position(1, 3)]
+    reference_positions = [Position(1, 12), Position(1, 13)]
     assert all(actual_positions[i] == reference_positions[i] for i in range(2))
+    for enemy in enemies:
+        position = enemy.get_position()
+        assert position is not None
+        cell = game_map.get_cells()[position.get_y() * game_map.get_width() + position.get_x()]
+        assert not cell.is_wall()
+        assert cell.get_object() is enemy
+        assert not enemy.is_inactive()
 
 
 def test_boss_level_generator_builds_map_places_hero_and_spawns_boss():
@@ -167,6 +183,11 @@ def test_boss_level_generator_builds_map_places_hero_and_spawns_boss():
     assert boss.get_params() is params
     assert boss.get_strategy() is strategy
     assert boss.get_attack() is attack
+    position = boss.get_position()
+    cell = game_map.get_cells()[position.get_y() * game_map.get_width() + position.get_x()]
+    assert not cell.is_wall()
+    assert cell.get_object() is boss
+    assert not boss.is_inactive()
     hero.set_position.assert_called_once()
     assert (
         hero.set_position.call_args.args[0].get_x(),
@@ -175,3 +196,21 @@ def test_boss_level_generator_builds_map_places_hero_and_spawns_boss():
     params_gen.generate_monster_params.assert_called_once_with(2)
     strategy_gen.generate_monster_strategy.assert_called_once_with()
     attack_gen.generate_monster_attack.assert_called_once_with()
+
+
+def test_generator_restores_progress_before_boss():
+    params_gen = MonsterParamsGenerator([ActorParams(10, 0, 3, 1)])
+    strategy_gen = MonsterStrategyGenerator([SimpleMonsterStrategy()])
+    boss = BossLevelGenerator(
+        60, 40, 3, params_gen, strategy_gen, MonsterAttackGenerator([CircleAttack(1, 5)])
+    )
+    generator = CommonLevelGenerator(60, 40, (3, 3), (2, 2), (1, 1), params_gen, strategy_gen)
+    generator.boss_generator = boss
+    hero = make_hero()
+    console = MagicMock(spec=IModelSubscriber)
+
+    for _ in range(4):
+        assert not generator.generate_level(0, hero, console)[2]
+    restored = RandomLevelGeneratorLoader.load_from(RandomLevelGeneratorLoader.save_to(generator))
+    assert restored.generate_level(0, hero, console)[2]
+    assert not restored.generate_level(1, hero, console)[2]

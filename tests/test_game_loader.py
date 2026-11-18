@@ -89,6 +89,10 @@ def test_round_trip_preserves_shared_objects_and_inventory(game, tmp_path):
     GameLoader.save_to_file(game, path)
     data = SaveDataCodec.file_from_dict(json.loads(path.read_text(encoding="utf-8"))).snapshot
     restored = _load(data, game)
+    generator = restored.get_level_generator()
+    assert isinstance(generator, CommonLevelGenerator)
+    assert generator.legacy_progress
+    assert generator.level_in_section == 1
     cells = restored.get_map().get_cells()
     hero, enemy, boss = restored.get_actors()
     assert isinstance(hero, Hero)
@@ -101,6 +105,34 @@ def test_round_trip_preserves_shared_objects_and_inventory(game, tmp_path):
     assert len(list(hero.get_certificates())) == 1
     assert hero.get_current_id_card() is next(iter(hero.get_id_cards()))
     assert not hero.special_attack()
+
+
+def test_save_file_restores_level_progress_and_boss_generator(game, tmp_path):
+    generator = game.get_level_generator()
+    assert isinstance(generator, CommonLevelGenerator)
+    generator.boss_generator = BossLevelGenerator(
+        60,
+        40,
+        3,
+        MonsterParamsGenerator([ActorParams(30, 2, 6, 1)]),
+        MonsterStrategyGenerator([SimpleMonsterStrategy()]),
+        MonsterAttackGenerator([CircleAttack(1, 5)]),
+    )
+    generator.level_in_section = 4
+    path = tmp_path / "save.json"
+    GameLoader.save_to_file(game, path)
+    config = MagicMock(spec=GlobalConfig)
+    config.is_save_actual.return_value = True
+    with patch("play_cycle.game.GlobalConfig.get_instance", return_value=config):
+        restored = GameLoader.load_from_file(path, Queue(), MagicMock(spec=IModelSubscriber))
+
+    loaded = restored.get_level_generator()
+    assert isinstance(loaded, CommonLevelGenerator)
+    assert loaded.level_in_section == 4
+    assert not loaded.legacy_progress
+    assert isinstance(loaded.boss_generator, BossLevelGenerator)
+    hero = Hero(ActorParams(20, 1, 5, 1), Position(0, 0), [], Queue())
+    assert loaded.generate_level(1, hero, MagicMock(spec=IModelSubscriber))[2]
 
 
 def test_save_omits_redundant_coordinates_and_inapplicable_fields(game, tmp_path):

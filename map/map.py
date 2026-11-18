@@ -70,6 +70,8 @@ class Map(IMap):
             return
         self._console.register_attack(position, direction)
         self._hit_cell(target, force)
+        if isinstance(obj, Hero):
+            obj.set_action_succeeded(True)
 
     def interact_direct(self, position: Position, force: int) -> None:
         cell = self._get_cell(position)
@@ -150,4 +152,5 @@ class Map(IMap):
         obj.interact(force)
         if obj.is_inactive():
             cell.remove_cell_object(obj)
-            self._on_terminate_object()
+            if obj is not self._hero:
+                self._on_terminate_object()

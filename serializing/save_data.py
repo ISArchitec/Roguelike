@@ -236,7 +236,19 @@ class SaveDataCodec:
     @staticmethod
     def to_dict(data: GameData | SaveFileData) -> dict:
         """Convert a snapshot into JSON-compatible data."""
-        return SaveDataCodec._omit_none(asdict(data))
+        result = SaveDataCodec._omit_none(asdict(data))
+        snapshot = data.snapshot if isinstance(data, SaveFileData) else data
+        generator = snapshot.generator
+        boss = getattr(generator, "boss", None)
+        if boss is not None:
+            serialized = (
+                result["snapshot"]["generator"]
+                if isinstance(data, SaveFileData)
+                else result["generator"]
+            )
+            serialized["level_in_section"] = vars(generator)["level_in_section"]
+            serialized["boss"] = SaveDataCodec._omit_none(asdict(boss))
+        return result
 
     @staticmethod
     def file_from_dict(data: dict) -> SaveFileData:
@@ -422,15 +434,19 @@ class SaveDataCodec:
             "corner_size_range",
             "enemies_range",
             "attacks_pool",
+            "level_in_section",
+            "boss",
         }
         SaveDataCodec._fields(data, common, frozenset(optional))
         kind = LevelGeneratorType(SaveDataCodec._string(data["type"]))
         if kind is LevelGeneratorType.COMMON:
             required = common | {"hallway_width_range", "corner_size_range", "enemies_range"}
+            if "boss" in data or "level_in_section" in data:
+                required |= {"boss", "level_in_section"}
         else:
             required = common | {"hallway_width", "attacks_pool"}
         SaveDataCodec._fields(data, required)
-        return GeneratorData(
+        result = GeneratorData(
             type=kind,
             width=SaveDataCodec._integer(data["width"]),
             height=SaveDataCodec._integer(data["height"]),
@@ -452,6 +468,10 @@ class SaveDataCodec:
             if "attacks_pool" in data
             else None,
         )
+        if "boss" in data:
+            vars(result)["level_in_section"] = SaveDataCodec._integer(data["level_in_section"])
+            vars(result)["boss"] = SaveDataCodec._generator(data["boss"])
+        return result
 
     @staticmethod
     def _strategy(data) -> StrategyType:

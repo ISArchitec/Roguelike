@@ -55,6 +55,10 @@ class BossMonster(IEnemy):
         )
         for action in action_list:
             if action.is_moving():
-                self._map.move(self, cast(Direction, action.get_direction()))
+                direction = cast(Direction, action.get_direction())
+                if self._position.move(direction) == self._map.get_hero_position():
+                    self._map.interact(self, direction, self._params.attack)
+                else:
+                    self._map.move(self, direction)
             elif action.is_using_special_attack():
                 self._attack.special_attack(self._map, self._position)

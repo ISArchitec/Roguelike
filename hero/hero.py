@@ -22,6 +22,7 @@ class Hero(IActor, ICellObject):
         self._event_queue = event_queue
         self._map: IMap | None = None
         self._inventory = Inventory(self._one_timers, [], None, [])
+        self._action_succeeded = True
 
     @classmethod
     def construct_from(
@@ -46,6 +47,9 @@ class Hero(IActor, ICellObject):
     def set_map(self, map: IMap) -> None:
         self._map = map
 
+    def set_action_succeeded(self, succeeded: bool) -> None:
+        self._action_succeeded = succeeded
+
     # Cell object methods
 
     def get_position(self) -> Position:
@@ -69,9 +73,13 @@ class Hero(IActor, ICellObject):
     # Actor methods
 
     def step(self):
-        for _i in range(self._params.speed):
+        actions_left = self._params.speed
+        while actions_left > 0:
             event = self._event_queue.get()
+            self._action_succeeded = True
             event.accept_hero(self)
+            if self._action_succeeded:
+                actions_left -= 1
 
     # Inventory handling
 
@@ -101,14 +109,22 @@ class Hero(IActor, ICellObject):
         self._inventory.add_certificate(certificate)
 
     def use_one_timer(self, index: int):
+        """Consume an item and apply its modifier to the hero."""
+        bonus = list(self._inventory.get_one_time_bonuses())[index]
         self._inventory.use_one_timer(index)
+        self._params = self._params + bonus.get_modifier()
 
     # Actions
 
     def try_move(self, direction: Direction) -> bool:
+        """Move into an empty cell or interact with an occupied adjacent cell."""
         if self._map is None:
             raise RuntimeError("Hero map has not been set")
-        return self._map.move(self, direction)
+        if self._map.move(self, direction):
+            return True
+        self._action_succeeded = False
+        self._map.interact(self, direction, self._params.attack)
+        return self._action_succeeded
 
     def special_attack(self) -> bool:
         id_card = self._inventory.get_current_id_card()

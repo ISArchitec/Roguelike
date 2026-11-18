@@ -7,4 +7,5 @@ class OneTimeBonusEvent(IEvent):
         self._index = index
 
     def accept_hero(self, hero: Hero) -> None:
+        """Apply the selected consumable."""
         hero.use_one_timer(self._index)
