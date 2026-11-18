@@ -58,20 +58,19 @@ class Map(IMap):
         self._console.register_move(position, direction)
         return True
 
-    def interact(self, obj: ICellObject, direction: Direction, force: int) -> None:
+    def interact(self, obj: ICellObject, direction: Direction, force: int) -> bool:
         position = obj.get_position()
         if position is None:
-            return
+            return False
         source = self._get_cell(position)
         if source is None or not source.check_in(obj):
-            return
+            return False
         target = self._get_cell(position.move(direction))
         if target is None or target.is_wall() or target.empty():
-            return
+            return False
         self._console.register_attack(position, direction)
         self._hit_cell(target, force)
-        if isinstance(obj, Hero):
-            obj.set_action_succeeded(True)
+        return True
 
     def interact_direct(self, position: Position, force: int) -> None:
         cell = self._get_cell(position)

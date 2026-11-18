@@ -11,7 +11,7 @@ class IMap(ABC):
         pass
 
     @abstractmethod
-    def interact(self, obj: ICellObject, direction: Direction, force: int):
+    def interact(self, obj: ICellObject, direction: Direction, force: int) -> bool:
         pass
 
     @abstractmethod
