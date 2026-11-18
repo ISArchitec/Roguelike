@@ -8,50 +8,39 @@ title Загрузка игры
 
 participant Console
 participant GameLoader
+participant SaveDataCodec as Codec
 participant RandomLevelGeneratorLoader as GeneratorLoader
-participant MapLoader
-participant CellLoader
-participant PositionLoader
-participant ICellObjectLoader as ObjectLoader
 participant IActorLoader as ActorLoader
-participant OneTimeBonusLoader as BonusLoader
+participant MapLoader
 participant Map
+participant Hero
 participant Game
-
-Console -> Console: continue_game()
+participant GlobalConfig as Config
 Console -> GameLoader: load_from_file(path, event_queue, console)
-activate GameLoader
+GameLoader -> Codec: file_from_dict(json.load(file))
+Codec --> GameLoader: SaveFileData(snapshot, checksum)
+GameLoader -> GameLoader: проверить checksum, version и счётчики
 GameLoader -> GeneratorLoader: load_from(generator_data)
-GeneratorLoader --> GameLoader: generator: ILevelGenerator
-GameLoader -> MapLoader: load_from(map_data)
-loop Для каждой клетки карты
-    MapLoader -> CellLoader: load_from(cell_data)
-    CellLoader -> PositionLoader: load_from(position_data)
-    PositionLoader --> CellLoader: position: Position
-    opt В клетке есть объект
-        CellLoader -> ObjectLoader: load_from(object_data)
-        ObjectLoader --> CellLoader: object: ICellObject
-    end
-    CellLoader --> MapLoader: cell: Cell
+GeneratorLoader --> GameLoader: generator
+GameLoader -> ActorLoader: load_from(actors[0], event_queue)
+ActorLoader --> GameLoader: hero с восстановленным инвентарём
+GameLoader -> MapLoader: load_from(map_data, hero, console)
+MapLoader -> Map: create_from(width, height, cells, hero, console)
+MapLoader --> GameLoader: map с наградами, пока без участников
+GameLoader -> Hero: set_map(map)
+loop Остальные участники
+    GameLoader -> ActorLoader: load_from(actor_data, event_queue, map)
+    ActorLoader --> GameLoader: enemy
 end
-MapLoader -> Map: create_from(width, height, cells, console, callback)
-MapLoader --> GameLoader: map: Map
-loop Для каждого участника уровня
-    GameLoader -> ActorLoader: load_from(actor_data)
-    ActorLoader -> PositionLoader: load_from(position_data)
-    PositionLoader --> ActorLoader: position: Position
-    opt Участник — герой
-        loop Для каждого одноразового бонуса героя
-            ActorLoader -> BonusLoader: load_from(bonus_data)
-            BonusLoader --> ActorLoader: bonus: OneTimeBonus
-        end
-    end
-    ActorLoader --> GameLoader: actor: IActor
-end
-GameLoader -> Game: create_from(...)
-GameLoader --> Console: game: Game
-deactivate GameLoader
-opt Сейчас ход не героя
-    ref over Console: Индикация текущего участника
-end
+GameLoader -> MapLoader: place_actors(map_data, map, actors)
+MapLoader -> Map: add_object(actor) по actor_index
+GameLoader -> Game: create_from(..., save_date)
+Game -> Config: is_save_actual(save_date)
+Config --> Game: True / иначе ValueError
+Game -> Map: set_on_terminate_object(callback)
+Game -> Hero: get_id_cards()
+Game -> Game: привязать tick_getter удостоверений к get_ticks()
+GameLoader -> GameLoader: восстановить callbacks подбора наград на карте\nи tick_getter лежащих удостоверений
+GameLoader --> Console: game
+Console -> Game: run_game()
 @enduml

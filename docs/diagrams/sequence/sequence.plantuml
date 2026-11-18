@@ -9,96 +9,63 @@ title Игровой цикл
 actor Игрок as Player
 participant Console
 participant Game
-participant RandomLevelGenerator as Generator
+participant ILevelGenerator as Generator
+participant GlobalConfig as Config
 participant Hero
-participant Monster
-participant BossMonster as Boss
+participant IEnemy as Enemy
 participant Map
 
 Player -> Console: run()
-activate Console
-Console -> Console: show_start_menu()
 alt Новая игра
-    Console -> Console: run_new_game()
-    Console -> Generator: create_new()
     Console -> Game: create_new(generator, event_queue, console)
+    ref over Game, Config: Начальный набор предметов
+    Game -> Hero: Hero(params, Position(0, 0), one_timers, event_queue)
     ref over Game, Generator: Генерация уровня
-    ref over Game: Начальный набор предметов
-    Game -> Hero: create_new(params, position, reserve, event_queue, map)
-else Загрузка игры
+    Game -> Hero: set_map(map)
+    Game -> Map: set_on_terminate_object(callback)
+    Game -> Config: register_save(save_date)
+else Загрузка
     ref over Console: Загрузка игры
 end
-
-Console -> Console: start_event_handling()
 Console -> Game: run_game()
-activate Game
-par Игровой цикл
-    loop Пока игра не пройдена полностью
-        Game -> Game: has_won_totally()
-        loop Пока уровень не завершён и игра не остановлена
-            Game -> Game: has_won_level()
-            Game -> Game: has_lost_level()
-            Game -> Game: tick()
-            loop Для каждого участника уровня
-                alt Герой
-                    Game -> Hero: step()
-                    ref over Hero: Перемещение героя / специальная атака / использование бонуса
-                else Монстр
-                    Game -> Monster: step()
-                    ref over Monster: Ход монстра
-                else Босс
-                    Game -> Boss: step()
-                    ref over Boss: Ход босса
-                end
-            end
-            Game -> Map: draw()
-            break Противников больше нет — уровень пройден
-            end
+loop Пока игра не остановлена
+    alt Герой погиб
+        Game -> Config: invalidate_save(save_date)
+        Game -> Console: on_lost()
+        break Завершение попытки
+            Game --> Console: return
         end
-        alt Игрок выходит из игры и персонаж жив — автосохранение
-            ref over Console: Сохранение игры
-            Game --> Console: завершение игры
-            break Выход из игрового цикла
+    else Врагов нет и награда подобрана
+        alt Конец пятой секции
+            Game -> Console: on_total_won()
+            break Полная победа
+                Game --> Console: return
             end
-        else Персонаж погиб
-            ref over Game: Аннулирование сохранений
-            Game -> Console: on_lost()
-            Console -> Console: show_lose_screen()
-            Game --> Console: завершение игры
-            break Выход из игрового цикла
-            end
-        else Уровень выигран
+        else Следующий уровень
             Game -> Console: on_won()
-            Console -> Console: show_win_screen()
-            alt Побеждён последний босс
-                ref over Console: Концовка игры — получение паспорта
-                Game --> Console: завершение игры
-                break Игра пройдена полностью
-                end
-            else Обычный уровень или не последний босс
-                ref over Game, Hero: Награда за прохождение уровня
-                ref over Game, Generator: Генерация уровня
-                opt У героя есть удостоверения
-                    ref over Console, Hero: Просмотр инвентаря и выбор удостоверения
-                end
-            end
+            ref over Game, Generator: Генерация уровня
+            Game -> Hero: reset_id_card(); set_map(new_map)
+            Game -> Map: set_on_terminate_object(callback)
+            Game -> Game: заменить участников, enemy_count; thing_got = 1
         end
+    else Врагов нет и награда ещё не размещена
+        ref over Game, Hero: Размещение награды на карте
     end
-else Управление игроком
-    loop Пока игра не завершена
-        opt Сохранение во время уровня
-            Player -> Console: сохранить игру
-            ref over Console: Сохранение игры
+    Game -> Hero: step()
+    loop Пока остались успешные действия героя
+        Hero -> Console: Queue.get() -> next_event()
+        Console -> Player: запрос команды
+        Player --> Console: команда
+        opt save / q / EOF / SIGTERM
+            ref over Console: Сохранение на границе тиков
         end
-        opt Игрок выходит из игры
-            Player -> Console: выйти из игры
-            Console ->> Game: stop()
-        end
+        Console --> Hero: IEvent
+        Hero -> Hero: event.accept_hero(self)
     end
+    loop Для каждого живого врага
+        Game -> Enemy: step()
+    end
+    Game -> Game: ticks += 1
+    Game -> Map: draw()
 end
-deactivate Game
-opt Персонаж погиб
-    Console -> Console: show_start_menu()
-end
-deactivate Console
 @enduml
