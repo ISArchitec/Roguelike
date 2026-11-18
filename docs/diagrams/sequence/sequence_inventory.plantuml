@@ -1,0 +1,39 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Просмотр инвентаря и выбор удостоверения
+
+actor Игрок as Player
+participant Console
+participant Hero
+participant Inventory
+alt Рюкзак
+    Player -> Console: i / items
+    Console -> Hero: get_one_time_bonuses()
+    Hero -> Inventory: get_one_time_bonuses()
+    Inventory --> Console: Iterator<OneTimeBonus> через Hero
+else Справки
+    Player -> Console: f / certificates
+    Console -> Hero: get_certificates()
+    Hero -> Inventory: get_certificates()
+    Inventory --> Console: Iterator<Certificate> через Hero
+else Удостоверения
+    Player -> Console: c / cards
+    Console -> Hero: get_id_cards()
+    Hero -> Inventory: get_id_cards()
+    Inventory --> Console: Iterator<IDCard> через Hero
+end
+opt Выбор удостоверения
+    Player -> Console: card N
+    Console -> Hero: chose_id_card()
+    alt На уровне ещё не выбрано удостоверение и индекс корректен
+        Console -> Hero: use_id_card(N - 1)
+        Hero -> Inventory: use_id_card(N - 1)
+    else Уже выбрано или неверный индекс
+        Console -> Player: сообщение об ошибке
+    end
+end
+@enduml

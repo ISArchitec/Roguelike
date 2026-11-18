@@ -1,0 +1,51 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Перемещение, атака и подбор награды
+
+participant MovingEvent as Event
+participant Hero
+participant Map
+participant "Исходная клетка" as Source
+participant "Целевая клетка" as Target
+participant ICellObject as Object
+participant Console
+participant Game
+
+Event -> Hero: try_move(direction)
+Hero -> Map: move(hero, direction)
+Map -> Source: check_in(hero)
+alt Герой на карте, цель в границах, не стена и свободна
+    Map -> Hero: set_position(target_position)
+    Map -> Source: remove_cell_object(hero)
+    Map -> Target: add_cell_object(hero)
+    Map -> Console: register_move(position, direction)
+    Map --> Hero: True
+else Перемещение невозможно
+    Map --> Hero: False
+    Hero -> Map: interact(hero, direction, params.attack)
+    alt Исходный объект корректен, цель занята и не стена
+        Map -> Console: register_attack(position, direction)
+        Map -> Object: interact(force)
+        note right of Object
+          Живое существо получает урон.
+          Награда вызывает callback подбора.
+        end note
+        Map -> Object: is_inactive()
+        opt Объект погиб или награда подобрана
+            Map -> Target: remove_cell_object(object)
+            opt Удалённый объект — не герой
+                Map -> Game: _count_down_on_terminate() через callback
+            end
+        end
+        Map --> Hero: True
+    else Нет допустимой цели
+        Map --> Hero: False
+    end
+end
+Hero --> Event: succeeded: Bool
+Event -> Hero: set_action_succeeded(succeeded)
+@enduml

@@ -1,0 +1,36 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Ход монстра
+
+participant Game
+participant Monster
+participant IMonsterStrategy as Strategy
+participant Map
+participant Hero
+participant Console
+Game -> Monster: step()
+Monster -> Map: get_hero_position()
+Monster -> Strategy: action(map, position, hero_position, None, speed)
+Strategy -> Map: find_path_to_hero(position)
+Map --> Strategy: направления кратчайшего пути (BFS)
+Strategy --> Monster: List<MonsterAction>
+loop Для каждого действия
+    alt Следующая клетка — позиция героя
+        Monster -> Map: interact(monster, direction, attack)
+        Map -> Console: register_attack(position, direction)
+        Map -> Hero: interact(force)
+        Map -> Hero: is_inactive()
+        opt Герой погиб
+            Map -> Map: удалить героя с клетки без callback счётчика врагов
+        end
+        Map --> Monster: succeeded: Bool
+    else Перемещение
+        Monster -> Map: move(monster, direction)
+        Map --> Monster: moved: Bool
+    end
+end
+@enduml

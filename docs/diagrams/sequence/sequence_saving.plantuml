@@ -1,0 +1,40 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Сохранение игры
+
+actor Игрок as Player
+participant Console
+participant GameLoader
+participant Game
+participant RandomLevelGeneratorLoader as GeneratorLoader
+participant IActorLoader as ActorLoader
+participant MapLoader
+participant CellLoader
+participant SaveDataCodec as Codec
+participant "JSON-файл" as File
+Player -> Console: save / q / EOF / SIGTERM
+Console -> GameLoader: save_to_file(game, path)
+GameLoader -> Game: has_lost_level(); получить состояние через getters
+GameLoader -> GeneratorLoader: save_to(generator)
+GeneratorLoader --> GameLoader: состояние генератора и level_in_section
+loop Герой и враги
+    GameLoader -> ActorLoader: save_to(actor)
+    ActorLoader --> GameLoader: характеристики, позиция, инвентарь / стратегия / атака
+end
+GameLoader -> MapLoader: save_to(map, actors)
+loop Клетки в порядке индекса
+    MapLoader -> CellLoader: save_to(cell, actors)
+    CellLoader --> MapLoader: wall; actor_index либо object награды
+end
+MapLoader --> GameLoader: MapData
+GameLoader -> GameLoader: GameData(version=1, counters, save_date, ...)
+GameLoader -> Codec: to_dict(SaveFileData(snapshot, checksum))
+Codec --> GameLoader: JSON-совместимые данные
+GameLoader -> File: временный файл: json.dump(), flush(), fsync()
+GameLoader -> File: os.replace(temporary_path, path)
+GameLoader --> Console: сохранено
+@enduml

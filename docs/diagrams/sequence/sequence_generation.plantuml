@@ -1,0 +1,48 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Генерация уровня
+
+participant Game
+participant CommonLevelGenerator as Common
+participant BossLevelGenerator as Boss
+participant MapBuilder as Builder
+participant Hero
+participant Map
+participant "Генераторы параметров, стратегии и атаки" as Factories
+
+Game -> Common: generate_level(section_number, hero, console)
+alt Пятый уровень секции и задан boss_generator
+    Common -> Boss: generate_level(section_number, hero, console)
+    Boss -> Builder: MapBuilder(width, height, fill_with_walls=True)
+    Boss -> Builder: fill_rectangle(..., is_wall=False)
+    Boss -> Hero: set_position(стартовая позиция)
+    Boss -> Builder: add_hero(hero)
+    Boss -> Builder: to_map(console)
+    Builder --> Boss: map
+    Boss -> Factories: сгенерировать параметры, стратегию и атаку
+    Boss -> Boss: BossMonster(params, position, map, strategy, attack)
+    Boss -> Map: add_object(boss)
+    Boss --> Common: (map, [boss], True)
+    Common -> Common: level_in_section = 0
+else Обычный уровень
+    Common -> Builder: MapBuilder(width, height, fill_with_walls=True)
+    Common -> Builder: fill_rectangle(..., is_wall=False)
+    Common -> Hero: set_position(Position(0, 0))
+    Common -> Builder: add_hero(hero)
+    Common -> Builder: to_map(console)
+    Builder --> Common: map
+    loop Для каждого врага
+        Common -> Factories: сгенерировать параметры и стратегию
+        Common -> Common: Monster(params, position, map, strategy)
+        Common -> Map: add_object(enemy)
+    end
+    Common -> Common: level_in_section = (level_in_section + 1) % 5
+end
+Common --> Game: (map, enemies, is_section_end)
+Game -> Hero: set_map(map)
+Game -> Map: set_on_terminate_object(callback)
+@enduml

@@ -1,0 +1,32 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Ход босса
+
+participant Game
+participant BossMonster as Boss
+participant IMonsterStrategy as Strategy
+participant IAreaAttack as Attack
+participant Map
+Game -> Boss: step()
+Boss -> Map: get_hero_position()
+Boss -> Strategy: action(map, position, hero_position, attack, speed)
+Strategy --> Boss: List<MonsterAction>
+loop Для каждого действия
+    alt Движение к клетке героя
+        Boss -> Map: interact(boss, direction, params.attack)
+        Map --> Boss: succeeded: Bool
+    else Движение в другую клетку
+        Boss -> Map: move(boss, direction)
+        Map --> Boss: moved: Bool
+    else Специальная атака
+        Boss -> Attack: special_attack(map, position)
+        loop Для клеток области атаки
+            Attack -> Map: interact_direct(target_position, force)
+        end
+    end
+end
+@enduml

@@ -1,0 +1,38 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Специальная атака героя
+
+participant SpecialAttackEvent as Event
+participant Hero
+participant Inventory
+participant IDCard as Card
+participant Game
+participant IAreaAttack as Attack
+participant Map
+Event -> Hero: special_attack()
+Hero -> Inventory: get_current_id_card()
+Inventory --> Hero: card или None
+alt Удостоверение не выбрано
+    Hero --> Event: False
+else Удостоверение выбрано
+    Hero -> Card: special_attack(map, position)
+    Card -> Game: get_ticks() через tick_getter
+    Game --> Card: tick
+    alt tick - tick_since >= timeout
+        Card -> Attack: special_attack(map, position)
+        loop Для клеток области атаки
+            Attack -> Map: interact_direct(target_position, force)
+        end
+        Card -> Card: tick_since = tick
+        Card --> Hero: True
+    else Кулдаун не истёк
+        Card --> Hero: False
+    end
+    Hero --> Event: succeeded: Bool
+end
+Event -> Hero: set_action_succeeded(succeeded)
+@enduml

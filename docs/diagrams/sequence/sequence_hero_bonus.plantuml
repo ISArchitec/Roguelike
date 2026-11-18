@@ -1,0 +1,22 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Использование одноразового бонуса
+
+participant OneTimeBonusEvent as Event
+participant Hero
+participant Inventory
+participant OneTimeBonus as Bonus
+Event -> Hero: use_one_timer(index)
+Hero -> Inventory: get_one_time_bonuses()
+Inventory --> Hero: итератор предметов
+Hero -> Hero: выбрать bonus по index
+Hero -> Inventory: use_one_timer(index)
+Inventory -> Inventory: удалить предмет
+Hero -> Bonus: get_modifier()
+Bonus --> Hero: modifier: ActorParams
+Hero -> Hero: params = params + modifier
+@enduml

@@ -1,0 +1,21 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Начальный набор предметов
+
+participant Game
+participant GlobalConfig as Config
+participant Hero
+Game -> Config: get_initial_thing_pool_size()
+Config --> Game: pool_size
+Game -> Config: get_initial_thing_count()
+Config --> Game: count
+loop count раз, выбор с повторениями
+    Game -> Config: get_special_thing(randrange(pool_size))
+    Config --> Game: шаблон OneTimeBonus
+    Game -> Game: deepcopy(шаблон) -> one_timers
+end
+@enduml

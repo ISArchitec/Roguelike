@@ -1,0 +1,57 @@
+@startuml
+title Roguelike — Диаграмма конечных автоматов
+
+hide empty description
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundcorner 18
+skinparam linetype polyline
+skinparam nodesep 130
+skinparam ranksep 120
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam padding 8
+
+skinparam ArrowColor #64748B
+skinparam ArrowThickness 1.6
+skinparam ArrowFontColor #334155
+skinparam ArrowFontSize 12
+
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #94A3B8
+  FontColor #1E293B
+  FontSize 14
+  BorderThickness 1.5
+  StartColor #475569
+  EndColor #475569
+}
+
+state "Главное меню" as Menu #DBEAFE
+state "Победа" as Victory #D1FAE5
+state "Поражение" as Defeat #FFE4E6
+state "Текущий уровень" as Level #DCFCE7
+state "Награда на карте" as Reward #FEF3C7
+state "Выбор награды босса" as Choice #FEF3C7
+state "Граница тика / сохранение" as Save #DBEAFE
+
+[*] --> Menu
+Menu --> [*] : Выход из меню
+Menu --> Level : Новая игра / Game.create_new()
+Menu --> Level : Загрузка актуального снимка / GameLoader.load_from_file()
+Level --> Reward : Врагов нет, обычный уровень / разместить справку
+Level --> Choice : Врагов нет, конец секции
+Choice --> Reward : Выбрано одно из двух удостоверений / разместить на карте
+Reward --> Level : Награда подобрана, не финал / on_won(), _advance_level()
+Reward --> Victory : Награда подобрана, конец пятой секции / on_total_won()
+Level --> Defeat : Герой погиб / invalidate_save(), on_lost()
+Level --> Save : save, q, EOF или SIGTERM / дождаться границы тика
+Reward --> Save : save, q, EOF или SIGTERM / дождаться границы тика
+Choice --> Save : EOF или SIGTERM / выход до размещения награды
+Save --> Level : Только сохранение / продолжить ввод
+Save --> Menu : Выход / save_to_file()
+Victory --> Menu
+Defeat --> Menu
+
+@enduml

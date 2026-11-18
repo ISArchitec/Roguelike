@@ -1,0 +1,52 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Размещение и подбор награды
+
+actor Игрок as Player
+participant Game
+participant GlobalConfig as Config
+participant Console
+participant Map
+participant "Certificate / IDCard" as Reward
+participant Hero
+
+note over Game
+  enemy_count == 0 и reward_placed == False
+end note
+alt Обычный уровень
+    Game -> Config: get_certificate(randrange(pool_size))
+    Config --> Game: шаблон справки
+    Game -> Game: reward = deepcopy(шаблон)
+    Game -> Reward: set_on_pickup(lambda: hero.add_certificate(reward))
+else Конец секции (включая последнюю)
+    Game -> Config: get_boss_prizes(index) для двух разных случайных индексов
+    Config --> Game: шаблоны удостоверений
+    Game -> Game: deepcopy каждого шаблона
+    Game -> Console: choose_from_cards(cards)
+    Console -> Player: выбор из двух удостоверений
+    Player --> Console: номер
+    Console --> Game: selected_index
+    Game -> Reward: set_tick_getter(game.get_ticks)
+    Game -> Reward: set_on_pickup(lambda: hero.add_id_card(reward))
+end
+loop Случайный порядок клеток до успешного размещения
+    Game -> Reward: set_position(position)
+    Game -> Map: add_object(reward)
+    Map --> Game: placed: Bool
+end
+Game -> Game: reward_placed = True
+Player -> Hero: попытка движения к награде через событие
+Hero -> Map: interact(hero, direction, force)
+Map -> Reward: interact(force)
+Reward -> Hero: add_certificate(reward) / add_id_card(reward) через callback
+Reward -> Reward: очистить callback подбора
+Map -> Reward: is_inactive()
+Reward --> Map: True
+Map -> Map: удалить награду из клетки
+Map -> Game: _count_down_on_terminate() через callback
+Game -> Game: thing_got -= 1
+@enduml

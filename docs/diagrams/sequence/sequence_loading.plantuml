@@ -1,0 +1,46 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant roundCorner 0
+skinparam sequenceLifeLineBorderColor black
+skinparam sequenceLifeLineBackgroundColor white
+skinparam sequenceMessageAlign center
+title Загрузка игры
+
+participant Console
+participant GameLoader
+participant SaveDataCodec as Codec
+participant RandomLevelGeneratorLoader as GeneratorLoader
+participant IActorLoader as ActorLoader
+participant MapLoader
+participant Map
+participant Hero
+participant Game
+participant GlobalConfig as Config
+Console -> GameLoader: load_from_file(path, event_queue, console)
+GameLoader -> Codec: file_from_dict(json.load(file))
+Codec --> GameLoader: SaveFileData(snapshot, checksum)
+GameLoader -> GameLoader: проверить checksum, version и счётчики
+GameLoader -> GeneratorLoader: load_from(generator_data)
+GeneratorLoader --> GameLoader: generator
+GameLoader -> ActorLoader: load_from(actors[0], event_queue)
+ActorLoader --> GameLoader: hero с восстановленным инвентарём
+GameLoader -> MapLoader: load_from(map_data, hero, console)
+MapLoader -> Map: create_from(width, height, cells, hero, console)
+MapLoader --> GameLoader: map с наградами, пока без участников
+GameLoader -> Hero: set_map(map)
+loop Остальные участники
+    GameLoader -> ActorLoader: load_from(actor_data, event_queue, map)
+    ActorLoader --> GameLoader: enemy
+end
+GameLoader -> MapLoader: place_actors(map_data, map, actors)
+MapLoader -> Map: add_object(actor) по actor_index
+GameLoader -> Game: create_from(..., save_date)
+Game -> Config: is_save_actual(save_date)
+Config --> Game: True / иначе ValueError
+Game -> Map: set_on_terminate_object(callback)
+Game -> Hero: get_id_cards()
+Game -> Game: привязать tick_getter удостоверений к get_ticks()
+GameLoader -> GameLoader: восстановить callbacks подбора наград на карте\nи tick_getter лежащих удостоверений
+GameLoader --> Console: game
+Console -> Game: run_game()
+@enduml
