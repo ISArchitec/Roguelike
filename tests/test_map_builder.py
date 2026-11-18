@@ -52,20 +52,20 @@ def test_new(width, height, valid):
         ),
     ],
 )
-def test_add_passage(state, error):
+def test_add_wall(state, error):
     builder = MapBuilder.new(3, 2)
     position = Position(1, 1)
     obj = make_object(position)
     if state == "wall":
-        builder.add_passage(position)
+        builder.add_wall(position)
     elif state == "occupied-passage":
         builder.add_object(obj)
 
     if error:
         with pytest.raises(ValueError, match=error):
-            builder.add_passage(position)
+            builder.add_wall(position)
     else:
-        builder.add_passage(position)
+        builder.add_wall(position)
 
     expected_error = (
         "Cell is already occupied"
@@ -90,7 +90,7 @@ def test_add_object(state, error):
     obj = make_object(Position(2, 1))
     original = obj if state == "same" else make_object(Position(2, 1))
     if state == "wall":
-        builder.add_passage(Position(2, 1))
+        builder.add_wall(Position(2, 1))
     elif state in ("same", "other"):
         builder.add_object(original)
 
@@ -107,7 +107,7 @@ def test_add_object(state, error):
         builder.add_object(make_object(Position(2, 1)))
 
 
-@pytest.mark.parametrize("method", ["add_passage", "add_object", "add_hero"])
+@pytest.mark.parametrize("method", ["add_wall", "add_object", "add_hero"])
 @pytest.mark.parametrize(
     "position",
     [
@@ -122,7 +122,7 @@ def test_reject_outside_position(method, position):
     builder = MapBuilder.new(3, 2)
     argument = (
         position
-        if method == "add_passage"
+        if method == "add_wall"
         else make_object(position, Hero if method == "add_hero" else ICellObject)
     )
 
@@ -146,7 +146,7 @@ def test_add_hero(state, error):
     original = make_object(Position(0, 0), Hero)
     occupant = make_object(Position(2, 1))
     if state == "wall":
-        builder.add_passage(Position(2, 1))
+        builder.add_wall(Position(2, 1))
     elif state == "occupied":
         builder.add_object(occupant)
     elif state == "same-hero":
@@ -175,7 +175,7 @@ def test_to_map(has_hero):
     hero = make_object(Position(0, 0), Hero)
     obj = make_object(Position(2, 1))
     builder.add_object(obj)
-    builder.add_passage(Position(1, 0))
+    builder.add_wall(Position(1, 0))
     if has_hero:
         builder.add_hero(hero)
     else:
