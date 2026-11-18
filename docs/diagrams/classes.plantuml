@@ -8,507 +8,347 @@ skinparam ranksep 150
 title Диаграмма классов
 
 package generation {
-
 interface ILevelGenerator {
-    + generate_level(section_number: Int): Map
+    + generate_level(section_number: Int, hero: Hero, console: IModelSubscriber): (Map, List<IEnemy>, Bool)
 }
-
-class RandomLevelGenerator {
-    - level_in_section: Int
-
-    {static} + create_new()
-    {static} + create_from(level_in_section: Int)
-
-    + generate_level(section_number: Int, hero: Hero): Map
-    - generate_enemy(): IEnemy
+class CommonLevelGenerator {
+    + level_in_section: Int
+    + boss_generator: Optional<BossLevelGenerator>
+    + generate_level(section_number: Int, hero: Hero, console: IModelSubscriber): (Map, List<IEnemy>, Bool)
 }
-
-RandomLevelGenerator ..|> ILevelGenerator
-
+class BossLevelGenerator {
+    + generate_level(section_number: Int, hero: Hero, console: IModelSubscriber): (Map, List<IEnemy>, Bool)
+}
+CommonLevelGenerator ..|> ILevelGenerator
+BossLevelGenerator ..|> ILevelGenerator
+CommonLevelGenerator --> BossLevelGenerator : пятый уровень секции
 }
 
 package game {
-
-interface IModelSubscriber {
-    + on_won()
-    + on_lost()
-    + draw_passage(p: Position)
-    + draw_object(p: ICellObject)
-    + register_move(p: Position, d: Direction)
-    + register_attack(p: Position, d: Direction)
-    + register_special_attack(p: Position, radius: Int)
-    + show_things(ts: OneTimeBonus[])
-    + choose_from_cards(ics: IdCard[]): Int
-}
-
-interface IEvent {
-    + accept_hero(hero: Hero)
-}
-
 interface IActor {
     + step()
 }
-
+interface IAreaAttack {
+    + special_attack(map: IMap, position: Position)
+}
 class ActorParams {
-    + health: Int {readonly}
-    + defense: Int {readonly}
-    + attack: Int {readonly}
-    + speed: Int {readonly}
+    + health: Int
+    + defence: Int
+    + attack: Int
+    + speed: Int
+    + get_hit(force: Int): ActorParams
 }
 }
 
 package positioning {
-
 interface ICellObject {
-    + get_position(): Position
+    + get_position(): Optional<Position>
+    + set_position(position: Position)
     + interact(force: Int)
     + is_inactive(): Bool
 }
-
 class Position {
-    + x: Int {readonly}
-    + y: Int {readonly}
-
     + constructor(x: Int, y: Int)
-    + move(d: Direction): Option<Position>
+    + get_x(): Int
+    + get_y(): Int
+    + move(d: Direction): Position
 }
-
-note right of Position::constructor
-  position should be inside the map (check GlobalConfig)
-end note
-
 enum Direction {
     DOWN
     UP
     LEFT
     RIGHT
 }
-
 interface IMap {
     + move(o: ICellObject, direction: Direction): Bool
-    + interact(o: ICellObject, direction: Direction, force: Int)
-    + special_attack(o: ICellObject, radius: Int, force: Int)
+    + interact(o: ICellObject, direction: Direction, force: Int): Bool
+    + interact_direct(position: Position, force: Int)
+    + is_valid_position(position: Optional<Position>): Bool
+    + get_hero_position(): Position
+    + find_path_to_hero(position: Optional<Position>): List<Direction>
+}
 }
 
-}
-
-package hero_bonuses {
-
+package bonuses {
 class Certificate {
-    - position: Optional<Position>
-    - params: ActorParams
-
     + constructor(params: ActorParams)
-    + apply(hero: ActorParams): ActorParams
-
-    + get_position(): Position
-    + interact(Int)
+    + apply(params: ActorParams): ActorParams
+    + set_on_pickup(callback: Callable)
+    + interact(force: Int)
     + is_inactive(): Bool
 }
-
-Certificate ..|> ICellObject
-
 class IDCard {
-    - position: Optional<Position>
-    - tick_since: Int
-    - force: Int
-    - radius: Int
+    - attack: IAreaAttack
     - timeout: Int
-    - tick_getter: Option<Callback<Int>>
-
-    + constructor(force: Int, radius: Int, timeout: Int, position: Position, tick_since: Int = 0)
-
-    + get_position(): Position
-    + calculate_force(): Int
-    + calculate_radius(): Int
-    + interact(Int)
+    - tick_since: Int
+    + constructor(attack: IAreaAttack, timeout: Int, position: Optional<Position>, tick_since: Int)
+    + special_attack(map: IMap, position: Position): Bool
+    + set_tick_getter(callback: Callable<Int>)
+    + set_on_pickup(callback: Callable)
+    + interact(force: Int)
     + is_inactive(): Bool
-    + set_tick_getter(cb: Callback)
 }
-
-IDCard ..|> ICellObject
-
 class OneTimeBonus {
-    - modifier: ActorParams
-
     + constructor(params: ActorParams)
     + get_modifier(): ActorParams
 }
+Certificate ..|> ICellObject
+IDCard ..|> ICellObject
+IDCard --> IAreaAttack
+}
 
+package area_attacks {
+class CircleAttack
+class StraightAttack
+class WaveAttack
+CircleAttack ..|> IAreaAttack
+StraightAttack ..|> IAreaAttack
+WaveAttack ..|> IAreaAttack
 }
 
 package hero {
-
+interface IEvent {
+    + accept_hero(hero: Hero)
+}
 class Hero {
     - params: ActorParams
-    - position: Position
-    - inventory: HeroInventory
-    - eventQueue: Queue<IEvent>
-    - map: IMap
-    {static} + create_new(params: ActorParams, position: Position, reserve: OneTimeBonus[], eventQueue: Queue<IEvent>, map: IMap)
-    {static} + create_from(params: ActorParams, position: Position, reserve: OneTimeBonus[], id_pool: IDCard[], currentCard: Optional<IDCard>, eventQueue: Queue<IEvent>, map: IMap, certificates: List<Certificate>)
-    + get_position(): Position
-    + set_initial_position(p: Position)
+    - inventory: Inventory
+    - event_queue: Queue<IEvent>
+    - map: Optional<IMap>
+    + constructor(params: ActorParams, position: Position, one_timers: List<OneTimeBonus>, event_queue: Queue<IEvent>)
+    {static} + construct_from(params, position, one_timers, id_cards, current_id, certificates, event_queue): Hero
+    + set_map(map: IMap)
     + step()
-    + try_move(d: Direction)
-    + special_attack()
-    + use_thing(index: Int)
-    + get_things(): Iterator<OneTimeBonus>
-    + get_id_cards(): Iterator<IdCard>
-    + has_current_id_card(): Bool
-    + reset_id_card()
-    + use_id_card(index: Int)
-    + interact(force: Int)
-    + apply_modifiers(params: ActorParams)
-    + is_inactive(): Bool
-    + add_id_card(card: IDCard)
-    + add_certificate(certificate: Certificate)
-}
-
-class HeroInventory {
-    - reserve: OneTimeBonus[]
-    - id_pool: IDCard[]
-    - certificates: List<Certificate>
-    - currentCard: Optional<IDCard>
-
-    + get_things(): Iterator<OneTimeBonus>
-    + get_id_cards(): Iterator<IdCard>
-    + has_current_id_card(): Bool
+    + try_move(direction: Direction): Bool
+    + special_attack(): Bool
+    + set_action_succeeded(succeeded: Bool)
+    + use_one_timer(index: Int)
+    + get_one_time_bonuses(): Iterator<OneTimeBonus>
+    + get_id_cards(): Iterator<IDCard>
+    + get_certificates(): Iterator<Certificate>
+    + get_current_id_card(): Optional<IDCard>
+    + chose_id_card(): Bool
     + reset_id_card()
     + use_id_card(index: Int)
     + add_id_card(card: IDCard)
     + add_certificate(certificate: Certificate)
-    + use_thing(index: Int)
 }
-
-Hero *-- ActorParams
-
-Hero *-- HeroInventory
-
-Hero --> IMap
-
-note right of Hero::step
-  <code>
-  tick():
-    for i <- 1..params.speed:
-        event = eventQueue.pop()
-        event.accept_hero(this)
-  </code>
-end note
-
+class Inventory {
+    + get_one_time_bonuses(): Iterator<OneTimeBonus>
+    + get_id_cards(): Iterator<IDCard>
+    + get_certificates(): Iterator<Certificate>
+    + get_current_id_card(): Optional<IDCard>
+    + chose_id_card(): Bool
+    + reset_id_card()
+    + use_id_card(index: Int)
+    + add_id_card(card: IDCard)
+    + add_certificate(certificate: Certificate)
+    + use_one_timer(index: Int)
+}
+class MovingEvent
+class SpecialAttackEvent
+class OneTimeBonusEvent
+MovingEvent ..|> IEvent
+SpecialAttackEvent ..|> IEvent
+OneTimeBonusEvent ..|> IEvent
 Hero ..|> IActor
 Hero ..|> ICellObject
-
+Hero *-- Inventory
+Hero *-- ActorParams
 Hero --> IEvent
-HeroInventory --> hero_bonuses.OneTimeBonus
-HeroInventory --> hero_bonuses.Certificate
-HeroInventory --> hero_bonuses.IDCard
-
-class MovingEvent {
-    + accept_hero(hero: Hero)
-}
-
-MovingEvent ..|> IEvent
-
-class SpecialAttackEvent {
-    + accept_hero(hero: Hero)
-}
-
-SpecialAttackEvent ..|> IEvent
-
-class OneTimeBonusEvent {
-    - index: Int
-
-    + constructor(index: Int)
-    + accept_hero(hero: Hero)
-}
-
-OneTimeBonusEvent ..|> IEvent
-
+Hero --> IMap
+Inventory --> OneTimeBonus
+Inventory --> Certificate
+Inventory --> IDCard
+note right of Hero::step
+  Queue.get() ожидает событие.
+  После accept_hero() действие расходуется,
+  только если action_succeeded == True.
+end note
 }
 
 package map {
-
 class MapBuilder {
-    - cells: Cell[]
-    - width: Int
-    - height: Int
-
-    {static} + new(width: Int, height: Int)
+    + constructor(width: Int, height: Int, fill_with_walls: Bool)
+    {static} + new(width: Int, height: Int): MapBuilder
+    + add_wall(position: Position)
+    + remove_wall(position: Position)
+    + fill_rectangle(x0: Int, y0: Int, x1: Int, y1: Int, is_wall: Bool)
     + add_object(o: ICellObject)
-    + add_passage(p: Position)
-    + to_map(): Map
+    + add_hero(hero: Hero)
+    + to_map(console: IModelSubscriber): Map
 }
-
-MapBuilder --> Map : creates
-
 class Map {
-    - cells: Cell[]
-    - width: Int
-    - height: Int
-    - console: IModelSubscriber
-    - on_terminate_object: Callback
-
-    {static} + create_from(width: Int, height: Int, cells: Cell[], console: IModelSubscriber, on_terminate_object: Callback)
+    - hero: Hero
+    - cells: List<Cell>
+    - on_terminate_object: Optional<Callable>
+    {static} + create_from(width: Int, height: Int, cells: List<Cell>, hero: Hero, console: IModelSubscriber): Map
+    + set_on_terminate_object(callback: Callable)
     + draw()
     + move(o: ICellObject, direction: Direction): Bool
-    + interact(o: ICellObject, direction: Direction, force: Int)
-    + special_attack(o: ICellObject, radius: Int, force: Int)
-    + add_object(o: ICellObject)
+    + interact(o: ICellObject, direction: Direction, force: Int): Bool
+    + interact_direct(position: Position, force: Int)
+    + add_object(o: ICellObject): Bool
+    + get_hero(): Hero
+    + get_cells(): Tuple<Cell>
+    + find_path_to_hero(position: Optional<Position>): List<Direction>
 }
-
-Map --> Cell
-Map --> Direction
-
-Map ..|> IMap
-
 class Cell {
     + position: Position {readonly}
-    - object: ICellObject
-    - is_wall: Bool
-
-    {static} + create_new(p: Position)
-    {static} + create_from(p: Position, object: ICellObject, is_wall: Bool)
-
+    {static} + create_new(p: Position, is_wall: Bool): Cell
+    {static} + create_from(p: Position, object: Optional<ICellObject>, is_wall: Bool): Cell
     + add_cell_object(o: ICellObject): Bool
     + remove_cell_object(o: ICellObject)
     + check_in(o: ICellObject): Bool
-    + get_object(): ICellObject
+    + get_object(): Optional<ICellObject>
     + make_wall()
+    + remove_wall()
     + is_wall(): Bool
     + empty(): Bool
 }
-
+MapBuilder --> Map : creates
+Map --> Cell
+Map --> Hero
+Map ..|> IMap
+Cell --> ICellObject
 Cell --> Position
-
 }
 
 package monsters {
-
-interface IEnemy {
-    + get_position(): Position
-    + interact(force: Int)
-    + is_inactive(): Bool
-    + step()
+interface IEnemy
+interface IMonsterStrategy {
+    + action(map: IMap, monster_position: Position, hero_position: Position, special_attack: Optional<IAreaAttack>, speed: Int): List<MonsterAction>
 }
-
-IEnemy ..|> IActor
-IEnemy ..|> ICellObject
-
 class Monster {
-    - params: ActorParams
-    - position: Position
-    - map: IMap
-
-    + constructor(params: ActorParams, position: Position, map: IMap)
-    + get_position(): Position
+    + constructor(params: ActorParams, position: Position, map: IMap, strategy: IMonsterStrategy)
     + step()
-    + interact(force: Int)
-    + is_inactive(): Bool
+    + set_map(map: IMap)
 }
-
-Monster *-- ActorParams
+class BossMonster {
+    + constructor(params: ActorParams, position: Position, map: IMap, strategy: IMonsterStrategy, attack: IAreaAttack)
+    + step()
+    + set_map(map: IMap)
+}
+IEnemy --|> IActor
+IEnemy --|> ICellObject
 Monster ..|> IEnemy
+BossMonster ..|> IEnemy
+Monster --> IMonsterStrategy
+BossMonster --> IMonsterStrategy
+BossMonster --> IAreaAttack
 Monster --> IMap
 BossMonster --> IMap
-
-class BossMonster {
-    - params: ActorParams
-    - position: Position
-    - map: IMap
-    - hero: Hero
-    - strategy: IBossStrategy
-    + interact(force: Int)
-    + is_inactive(): Bool
-    + try_move(): Bool
-
-    + constructor(params: ActorParams, position: Position, map: IMap, hero: Hero, strategyL IBossStrategy)
-    + get_position(): Position
-    + step()
 }
-
-note right of BossMonster::step
-  <code>
-  step():
-    action = strategy.get_action(hero, this)
-    action(this)
-  </code>
-end note
-
-BossMonster --> IBossStrategy
-
-interface IBossStrategy {
-    + get_action(hero: Hero, boss: BossMonster): Callable
-}
-
-BossMonster ..|> IEnemy
+package monster_strategies {
+class SimpleMonsterStrategy
+SimpleMonsterStrategy ..|> IMonsterStrategy
 }
 
 package play_cycle {
-
-class GlobalConfig {
-    {static} - config: GlobalConfig
-    - map_size: (Int, Int)
-    - initial_hero_params: ActorParams
-    - monster_param_pool: ActorParams[]
-    - boss_param_pool: ActorParams[]
-    - object_view: Map<Type, String>
-    - boss_strategies: Map<String, Callable>
-    - boss_id_cards: List<IDCard>
-    - certificates: List<Certificate>
-    - initial_thing_pool: List<OneTimeBonus>
-
-    {static} + get_instance(): GlobalConfig
-    + get_map_size(): (Int, Int)
-    + get_initial_hero_params(): ActorParams
-    + get_monster_param_pool(): ActorParams[]
-    + get_boss_param_pool(): ActorParams[]
-    + get_object_view(o: ICellObject): String
-    + get_boss_strategies(): Iterator<String>
-    + get_boss_strategy(name: String): Callable
-    + get_boss_prizes(i: Int): IDCard
-    + get_certificate(i: Int): Certificate
-    + get_special_thing(i: Int): OneTimeBonus
-    - load()
-}
-
-class Game {
-    - section_passed: Int
-    - level_generator: ILevelGenerator
-    - map: Map
-    - actors: IActor[]
-    - ticks: Int
-    - enemy_count: Int
-    - thing_got: Int
-    - hero: Hero
-    - is_stopped: Bool
-    - console: IModelSubscriber
-
-    {static} + create_new(level_generator: ILevelGenerator, event_queue: Queue<IEvent>, console: IModelSubscriber)
-    {static} + create_from(section_passed: Int, level_generator: ILevelGenerator, map: Map, actors: IActor[], ticks: Int, hero: Hero, console: IModelSubscriber)
-    + run_game()
-    + has_won_level(): Bool
-    + has_lost_level(): Bool
-    + has_won_totally(): Bool
-    + stop()
-    + get_ticks(): Int
-    - tick()
-    - count_down_on_terminate()
-}
-
-note right of Game::tick
-  <code>
-  tick():
-    for actor in actors:
-        actor.step()
-    map.draw()
-  </code>
-end note
-
-note right of Game::run_game
-  <code>
-  run_game():
-    while not has_won_totally():
-        while not has_won_level() and not has_lost_level() and not is_stopped:
-            tick()
-            if enemy_count == 0 :
-                map.add_object(...)
-            map.draw(console)
-            ++ticks
-        if is_stopped:
-            return
-        if has_lost():
-            console.on_lost()
-            return
-        console.on_won()
-        map = level_generator.generate_level(...)
-  </code>
-end note
-
-note right of Game::count_down_on_terminate
-    Pass to Map constructor to count enemy and things statistics
-end note
-
-Game --> IActor
-Game --> Map
-Game --> ILevelGenerator
-Game --> IModelSubscriber
-Game --> Hero
-
-}
-
-package view {
-
-class Console {
-    - game: Game
-
-    + run()
+interface IModelSubscriber {
     + on_won()
+    + on_total_won()
     + on_lost()
     + draw_passage(p: Position)
     + draw_object(o: ICellObject)
     + register_move(p: Position, d: Direction)
     + register_attack(p: Position, d: Direction)
     + register_special_attack(p: Position, radius: Int)
-    + choose_from_cards(ics: IdCard[]): Int
-
-    - show_start_menu()
-    - run_new_game()
-    - continue_game()
-    - start_event_handling()
-    - show_win_screen()
-    - show_lose_screen()
+    + show_things(ts: List<OneTimeBonus>)
+    + choose_from_cards(cards: List<IDCard>): Int
+}
+class GlobalConfig {
+    + constructor(path: Path)
+    {static} + get_instance(): GlobalConfig
+    + get_map_size(): (Int, Int)
+    + get_initial_hero_params(): ActorParams
+    + get_monster_param_pool(): List<ActorParams>
+    + get_boss_param_pool(): List<ActorParams>
+    + get_object_view(o: ICellObject): String
+    + get_boss_prizes(index: Int): IDCard
+    + get_certificate(index: Int): Certificate
+    + get_special_thing(index: Int): OneTimeBonus
+    + get_initial_thing_count(): Int
+    + get_initial_thing_pool_size(): Int
+    + register_save(save_date: datetime)
+    + is_save_actual(save_date: datetime): Bool
+    + invalidate_save(save_date: datetime)
+}
+class Game {
+    - section_passed: Int
+    - ticks: Int
+    - enemy_count: Int
+    - thing_got: Int
+    - is_section_end: Bool
+    - reward_placed: Bool
+    - save_date: datetime
+    {static} + create_new(generator: ILevelGenerator, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
+    {static} + create_from(section_passed, generator, map, actors, ticks, hero, console, enemy_count, thing_got, is_section_end, reward_placed, save_date): Game
+    + run_game()
+    + has_won_level(): Bool
+    + has_lost_level(): Bool
+    + has_won_totally(): Bool
+    + stop()
+    + get_ticks(): Int
+    + get_save_date(): datetime
+    + get_hero(): Hero
+    + get_map(): Map
+    - _tick()
+    - _count_down_on_terminate()
+    - _place_level_reward()
+    - _advance_level()
+}
+note right of Game
+  Генератор возвращает карту, врагов и конец секции.
+  Game задаёт карте callback учёта удалённых объектов.
+  После врагов награда размещается на карте.
+  Переход / победа — только после её подбора.
+  IDCard получает Game.get_ticks как часы.
+end note
+Game --> IActor
+Game --> Map
+Game --> ILevelGenerator
+Game --> IModelSubscriber
+Game --> Hero
+Game --> GlobalConfig
+Map --> IModelSubscriber
 }
 
+package view {
+class Console {
+    + run()
+    + next_event(): IEvent
+    + message(text: String)
+    + remaining_cooldown(card: IDCard): Int
 }
-
-Console --> Game
 Console ..|> IModelSubscriber
+Console --> Game
+Console --> IEvent : ввод команд
+}
 
 package serializing {
-
-Console --> GameLoader
-
-class IActorLoader {
-    {static} + load_from(json: Json): IActor
-    {static} + save_to(game: IActor): Json
-}
-
-class ICellObjectLoader {
-    {static} + load_from(json: Json): ICellObject
-    {static} + save_to(o: ICellObject): Json
-}
-
-class PositionLoader {
-    {static} + load_from(json: Json): Position
-    {static} + save_to(p: Position): Json
-}
-
-class OneTimeBonusLoader {
-    {static} + load_from(json: Json): OneTimeBonus
-    {static} + save_to(t: OneTimeBonus): Json
-}
-
-class MapLoader {
-    {static} + load_from(json: Json): Map
-    {static} + save_to(game: Map): Json
-}
-
-class CellLoader {
-    {static} + load_from(json: Json): Cell
-    {static} + save_to(cell: Cell): Json
-}
-
 class GameLoader {
-    {static} + load_from(json: Json, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
-    {static} + save_to(game: Game): Json
+    {static} + save_to(game: Game): GameData
+    {static} + load_from(data: GameData, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
+    {static} + save_to_file(game: Game, path: Path)
+    {static} + load_from_file(path: Path, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
 }
-
-class RandomLevelGeneratorLoader {
-    {static} + load_from(json: Json): ILevelGenerator
-    {static} + save_to(g: ILevelGenerator): Json
+class IActorLoader
+class ICellObjectLoader
+class MapLoader
+class CellLoader
+class PositionLoader
+class OneTimeBonusLoader
+class RandomLevelGeneratorLoader
+class SaveDataCodec
+GameLoader --> IActorLoader
+GameLoader --> MapLoader
+GameLoader --> RandomLevelGeneratorLoader
+GameLoader --> SaveDataCodec
+MapLoader --> CellLoader
+CellLoader --> ICellObjectLoader
+IActorLoader --> OneTimeBonusLoader
+IActorLoader --> PositionLoader
+Console --> GameLoader
 }
-
-}
-
 @enduml

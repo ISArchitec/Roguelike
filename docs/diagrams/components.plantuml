@@ -12,17 +12,20 @@ interface "IEvent"           as IEvent
 interface "IModelSubscriber" as IModelSub
 interface "IEnemy"           as IEnemy
 interface "ILevelGenerator"  as ILevelGen
+interface "IAreaAttack"      as IAreaAttack
 
 component "game"        as game
 component "positioning" as positioning
 component "hero"        as hero
-component "hero_bonuses" as HeroBonuses
+component "bonuses" as HeroBonuses
 component "map"         as map
 component "monsters"    as monsters
 component "generation"  as generation
 component "play_cycle"  as play_cycle
 component "view"        as view
 component "serializing" as serializing
+component "area_attacks" as area_attacks
+component "monster_strategies" as strategies
 
 hero        -up- ICell
 HeroBonuses -up- ICell
@@ -47,6 +50,9 @@ play_cycle  --( IEvent
 play_cycle  --( ILevelGen
 view        --( ICell
 
+area_attacks -up- IAreaAttack
+HeroBonuses --( IAreaAttack
+monsters --( IAreaAttack
 map ..> positioning
 play_cycle ..> game
 

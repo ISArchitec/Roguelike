@@ -505,3 +505,37 @@ def test_monster_stops_harming_hero_after_lethal_attack():
     assert hero.is_inactive()
     assert hero.get_params().health == 0
     assert monster.get_position() == Position(0, 0)
+
+
+@pytest.mark.parametrize("inactive", [False, True])
+def test_interact_returns_true_for_hit(inactive):
+    actor, target = make_object(0, 0), make_object(1, 0, inactive)
+    game_map = make_map(objects=[actor, target])
+    game_map.set_on_terminate_object(MagicMock())
+    assert game_map.interact(actor, Direction.RIGHT, 7) is True
+
+
+@pytest.mark.parametrize("position", [None, Position(-1, 0), Position(0, 0)])
+def test_interact_returns_false_for_missing_actor(position):
+    actor = make_object(0, 0)
+    actor.get_position.return_value = position
+    assert make_map().interact(actor, Direction.RIGHT, 7) is False
+
+
+@pytest.mark.parametrize("state", ["outside", "wall", "empty"])
+def test_interact_returns_false_for_unavailable_target(state):
+    actor = make_object(0, 0)
+    game_map = make_map(objects=[actor], walls=[(1, 0)] if state == "wall" else [])
+    direction = Direction.LEFT if state == "outside" else Direction.RIGHT
+    assert game_map.interact(actor, direction, 7) is False
+
+
+@pytest.mark.parametrize("succeeded", [False, True])
+def test_hero_try_move_returns_interaction_result(succeeded):
+    hero = Hero(ActorParams(20, 1, 5, 1), Position(0, 0), [], Queue())
+    game_map = MagicMock(spec=Map)
+    game_map.move.return_value = False
+    game_map.interact.return_value = succeeded
+    hero.set_map(game_map)
+    assert hero.try_move(Direction.RIGHT) is succeeded
+    game_map.interact.assert_called_once_with(hero, Direction.RIGHT, 5)

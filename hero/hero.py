@@ -122,9 +122,7 @@ class Hero(IActor, ICellObject):
             raise RuntimeError("Hero map has not been set")
         if self._map.move(self, direction):
             return True
-        self._action_succeeded = False
-        self._map.interact(self, direction, self._params.attack)
-        return self._action_succeeded
+        return self._map.interact(self, direction, self._params.attack)
 
     def special_attack(self) -> bool:
         id_card = self._inventory.get_current_id_card()

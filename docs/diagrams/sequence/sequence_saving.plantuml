@@ -1,4 +1,4 @@
-﻿@startuml
+@startuml
 skinparam shadowing false
 skinparam sequenceParticipant roundCorner 0
 skinparam sequenceLifeLineBorderColor black
@@ -6,43 +6,35 @@ skinparam sequenceLifeLineBackgroundColor white
 skinparam sequenceMessageAlign center
 title Сохранение игры
 
+actor Игрок as Player
 participant Console
 participant GameLoader
+participant Game
 participant RandomLevelGeneratorLoader as GeneratorLoader
+participant IActorLoader as ActorLoader
 participant MapLoader
 participant CellLoader
-participant PositionLoader
-participant ICellObjectLoader as ObjectLoader
-participant IActorLoader as ActorLoader
-participant OneTimeBonusLoader as BonusLoader
-
+participant SaveDataCodec as Codec
+participant "JSON-файл" as File
+Player -> Console: save / q / EOF / SIGTERM
 Console -> GameLoader: save_to_file(game, path)
-activate GameLoader
+GameLoader -> Game: has_lost_level(); получить состояние через getters
 GameLoader -> GeneratorLoader: save_to(generator)
-GeneratorLoader --> GameLoader: generator_data
-GameLoader -> MapLoader: save_to(map)
-loop Для каждой клетки карты
-    MapLoader -> CellLoader: save_to(cell)
-    CellLoader -> PositionLoader: save_to(position)
-    PositionLoader --> CellLoader: position_data
-    opt В клетке есть объект
-        CellLoader -> ObjectLoader: save_to(object)
-        ObjectLoader --> CellLoader: object_data
-    end
-    CellLoader --> MapLoader: cell_data
-end
-MapLoader --> GameLoader: map_data
-loop Для каждого участника уровня
+GeneratorLoader --> GameLoader: состояние генератора и level_in_section
+loop Герой и враги
     GameLoader -> ActorLoader: save_to(actor)
-    ActorLoader -> PositionLoader: save_to(position)
-    PositionLoader --> ActorLoader: position_data
-    opt Участник — герой
-        loop Для каждого одноразового бонуса героя
-            ActorLoader -> BonusLoader: save_to(bonus)
-            BonusLoader --> ActorLoader: bonus_data
-        end
-    end
-    ActorLoader --> GameLoader: actor_data
+    ActorLoader --> GameLoader: характеристики, позиция, инвентарь / стратегия / атака
 end
-deactivate GameLoader
+GameLoader -> MapLoader: save_to(map, actors)
+loop Клетки в порядке индекса
+    MapLoader -> CellLoader: save_to(cell, actors)
+    CellLoader --> MapLoader: wall; actor_index либо object награды
+end
+MapLoader --> GameLoader: MapData
+GameLoader -> GameLoader: GameData(version=1, counters, save_date, ...)
+GameLoader -> Codec: to_dict(SaveFileData(snapshot, checksum))
+Codec --> GameLoader: JSON-совместимые данные
+GameLoader -> File: временный файл: json.dump(), flush(), fsync()
+GameLoader -> File: os.replace(temporary_path, path)
+GameLoader --> Console: сохранено
 @enduml

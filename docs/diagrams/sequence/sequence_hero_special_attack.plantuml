@@ -1,4 +1,4 @@
-﻿@startuml
+@startuml
 skinparam shadowing false
 skinparam sequenceParticipant roundCorner 0
 skinparam sequenceLifeLineBorderColor black
@@ -6,26 +6,33 @@ skinparam sequenceLifeLineBackgroundColor white
 skinparam sequenceMessageAlign center
 title Специальная атака героя
 
-participant Hero
 participant SpecialAttackEvent as Event
-participant HeroInventory as Inventory
+participant Hero
+participant Inventory
 participant IDCard as Card
+participant Game
+participant IAreaAttack as Attack
 participant Map
-
-activate Event
 Event -> Hero: special_attack()
-activate Hero
-Hero -> Inventory: has_current_id_card()
-Inventory --> Hero: has_card: Bool
-opt Удостоверение выбрано
-    ref over Hero, Card: Проверка перезарядки
-    opt Атака доступна
-        Hero -> Card: calculate_force()
-        Card --> Hero: force: Int
-        Hero -> Map: special_attack(hero, radius, force)
-        ref over Hero, Card: Запуск перезарядки
+Hero -> Inventory: get_current_id_card()
+Inventory --> Hero: card или None
+alt Удостоверение не выбрано
+    Hero --> Event: False
+else Удостоверение выбрано
+    Hero -> Card: special_attack(map, position)
+    Card -> Game: get_ticks() через tick_getter
+    Game --> Card: tick
+    alt tick - tick_since >= timeout
+        Card -> Attack: special_attack(map, position)
+        loop Для клеток области атаки
+            Attack -> Map: interact_direct(target_position, force)
+        end
+        Card -> Card: tick_since = tick
+        Card --> Hero: True
+    else Кулдаун не истёк
+        Card --> Hero: False
     end
+    Hero --> Event: succeeded: Bool
 end
-deactivate Hero
-deactivate Event
+Event -> Hero: set_action_succeeded(succeeded)
 @enduml

@@ -29,35 +29,29 @@ skinparam state {
 }
 
 state "Главное меню" as Menu #DBEAFE
-state "Победа"       as Victory #D1FAE5
-state "Поражение"    as Defeat  #FFE4E6
+state "Победа" as Victory #D1FAE5
+state "Поражение" as Defeat #FFE4E6
+state "Текущий уровень" as Level #DCFCE7
+state "Награда на карте" as Reward #FEF3C7
+state "Выбор награды босса" as Choice #FEF3C7
+state "Граница тика / сохранение" as Save #DBEAFE
 
-state "Игровой процесс" as GameProcess #FFFFFF {
-  state "Игровой уровень"   as Level #DCFCE7
-  state "Сражение с боссом" as Boss  #FEE2E2
-  state "Пауза"             as Pause #FEF3C7
-
-  [*] -down-> Level
-
-  Level -down-> Boss  : Босс появился\n[босс активен]\n/ create_boss()
-  Boss  -up->   Level : Босс побеждён\n[не последний уровень]\n/ give_reward();\ngenerate_level()
-
-  Level -right-> Pause : Приостановить\n/ game.stop()
-  Boss  -right-> Pause : Приостановить\n/ game.stop()
-
-  Pause -up-> [H] : Продолжить\n/ resume()
-}
-
-[*]  -right-> Menu
-Menu -right-> [*] : Выход\n/ завершить приложение
-
-Menu -down-> GameProcess : Новая игра\n/ Game.create_new()
-Menu -down-> GameProcess : Загрузка\n[сохранение существует]\n/ GameLoader.load_from()
-
-GameProcess -left->  Victory : Все уровни пройдены\n[game.has_won_totally()]\n/ console.on_won()
-GameProcess -right-> Defeat  : Герой погиб\n[game.has_lost_level()]\n/ console.on_lost()
-
-Victory -up-> Menu : Вернуться в меню\n/ console.show_start_menu()
-Defeat  -up-> Menu : Вернуться в меню\n/ console.show_start_menu()
+[*] --> Menu
+Menu --> [*] : Выход из меню
+Menu --> Level : Новая игра / Game.create_new()
+Menu --> Level : Загрузка актуального снимка / GameLoader.load_from_file()
+Level --> Reward : Врагов нет, обычный уровень / разместить справку
+Level --> Choice : Врагов нет, конец секции
+Choice --> Reward : Выбрано одно из двух удостоверений / разместить на карте
+Reward --> Level : Награда подобрана, не финал / on_won(), _advance_level()
+Reward --> Victory : Награда подобрана, конец пятой секции / on_total_won()
+Level --> Defeat : Герой погиб / invalidate_save(), on_lost()
+Level --> Save : save, q, EOF или SIGTERM / дождаться границы тика
+Reward --> Save : save, q, EOF или SIGTERM / дождаться границы тика
+Choice --> Save : EOF или SIGTERM / выход до размещения награды
+Save --> Level : Только сохранение / продолжить ввод
+Save --> Menu : Выход / save_to_file()
+Victory --> Menu
+Defeat --> Menu
 
 @enduml

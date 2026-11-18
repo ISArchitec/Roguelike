@@ -8,15 +8,14 @@ title Начальный набор предметов
 
 participant Game
 participant GlobalConfig as Config
-
-Game -> Config: get_instance()
-Config --> Game: config: GlobalConfig
-loop Фиксированное число предметов восстановления здоровья
-    Game -> Config: get_special_thing(healing_index)
-    Config --> Game: healing_item: OneTimeBonus
-end
-loop Случайный набор предметов с модификаторами
-    Game -> Config: get_special_thing(random_index)
-    Config --> Game: bonus: OneTimeBonus
+participant Hero
+Game -> Config: get_initial_thing_pool_size()
+Config --> Game: pool_size
+Game -> Config: get_initial_thing_count()
+Config --> Game: count
+loop count раз, выбор с повторениями
+    Game -> Config: get_special_thing(randrange(pool_size))
+    Config --> Game: шаблон OneTimeBonus
+    Game -> Game: deepcopy(шаблон) -> one_timers
 end
 @enduml

@@ -4,69 +4,48 @@ skinparam sequenceParticipant roundCorner 0
 skinparam sequenceLifeLineBorderColor black
 skinparam sequenceLifeLineBackgroundColor white
 skinparam sequenceMessageAlign center
-title Перемещение героя
+title Перемещение, атака и подбор награды
 
 participant MovingEvent as Event
 participant Hero
 participant Map
-participant Position
-participant Cell
+participant "Исходная клетка" as Source
+participant "Целевая клетка" as Target
 participant ICellObject as Object
 participant Console
 participant Game
 
-activate Event
 Event -> Hero: try_move(direction)
-activate Hero
 Hero -> Map: move(hero, direction)
-activate Map
-Map -> Position: move(direction)
-Position --> Map: target_position: Option<Position>
-opt Позиция существует
-    Map -> Cell: is_wall()
-    Cell --> Map: is_wall: Bool
-    opt Клетка не является стеной
-        Map -> Cell: empty()
-        Cell --> Map: is_empty: Bool
-        opt Клетка свободна
-            Map -> Cell: check_in(hero)
-            Cell --> Map: can_enter: Bool
-            opt Перемещение разрешено
-                Map -> Cell: remove_cell_object(hero)
-                Map -> Cell: add_cell_object(hero)
-                Cell --> Map: added: Bool
-                Map -> Console: register_move(position, direction)
-            end
-        end
-    end
-end
-Map --> Hero: moved: Bool
-deactivate Map
-opt Перемещение не удалось
+Map -> Source: check_in(hero)
+alt Герой на карте, цель в границах, не стена и свободна
+    Map -> Hero: set_position(target_position)
+    Map -> Source: remove_cell_object(hero)
+    Map -> Target: add_cell_object(hero)
+    Map -> Console: register_move(position, direction)
+    Map --> Hero: True
+else Перемещение невозможно
+    Map --> Hero: False
     Hero -> Map: interact(hero, direction, params.attack)
-    activate Map
-    Map -> Position: move(direction)
-    Position --> Map: target_position: Option<Position>
-    opt Позиция существует
-        Map -> Cell: empty()
-        Cell --> Map: is_empty: Bool
-        opt Клетка занята
-            Map -> Cell: get_object()
-            Cell --> Map: target: ICellObject
-            opt В клетке противник
-                Map -> Object: interact(force)
-                Map -> Console: register_attack(position, direction)
-                Map -> Object: is_inactive()
-                Object --> Map: inactive: Bool
-                opt Противник побеждён
-                    Map -> Cell: remove_cell_object(target)
-                    Map -> Game: count_down_on_terminate() через callback
-                end
+    alt Исходный объект корректен, цель занята и не стена
+        Map -> Console: register_attack(position, direction)
+        Map -> Object: interact(force)
+        note right of Object
+          Живое существо получает урон.
+          Награда вызывает callback подбора.
+        end note
+        Map -> Object: is_inactive()
+        opt Объект погиб или награда подобрана
+            Map -> Target: remove_cell_object(object)
+            opt Удалённый объект — не герой
+                Map -> Game: _count_down_on_terminate() через callback
             end
         end
+        Map --> Hero: True
+    else Нет допустимой цели
+        Map --> Hero: False
     end
-    deactivate Map
 end
-deactivate Hero
-deactivate Event
+Hero --> Event: succeeded: Bool
+Event -> Hero: set_action_succeeded(succeeded)
 @enduml
