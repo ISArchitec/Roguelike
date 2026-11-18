@@ -240,6 +240,7 @@ class Game:
             section_passed, self._hero, self._console
         )
         new_map.set_on_terminate_object(self._count_down_on_terminate)
+        self._hero.reset_id_card()
         self._hero.set_map(new_map)
         self._section_passed = section_passed
         self._is_section_end = is_section_end

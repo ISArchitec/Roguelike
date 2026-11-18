@@ -8,4 +8,5 @@ class MovingEvent(IEvent):
         self._direction = direction
 
     def accept_hero(self, hero: Hero) -> None:
-        hero.try_move(self._direction)
+        """Move or interact in the selected direction."""
+        hero.set_action_succeeded(hero.try_move(self._direction))

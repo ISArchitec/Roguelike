@@ -21,6 +21,8 @@ class CommonLevelGenerator(ILevelGenerator):
         params_gen: MonsterParamsGenerator,
         strategy_gen: MonsterStrategyGenerator,
     ):
+        from generation.boss_level_generator import BossLevelGenerator
+
         self.map_width = width
         self.map_height = height
         self.hallway_width_range = hallway_width_range
@@ -28,10 +30,19 @@ class CommonLevelGenerator(ILevelGenerator):
         self.enemies_range = enemies_range
         self.params_gen = params_gen
         self.strategy_gen = strategy_gen
+        self.boss_generator: BossLevelGenerator | None = None
+        self.level_in_section = 0
+        self.legacy_progress = False
 
     def generate_level(
         self, section_number: int, hero: Hero, console: IModelSubscriber
     ) -> tuple[Map, list[IEnemy], bool]:
+        """Generate the next regular level or the section's boss level."""
+        levels_per_section = 5
+        if self.boss_generator is not None and self.level_in_section == levels_per_section - 1:
+            level = self.boss_generator.generate_level(section_number, hero, console)
+            self.level_in_section = 0
+            return level
         hallway_width = random.randint(self.hallway_width_range[0], self.hallway_width_range[1])
         corner_size = random.randint(self.corner_size_range[0], self.corner_size_range[1])
         enemies_count = random.randint(self.enemies_range[0], self.enemies_range[1])
@@ -84,14 +95,16 @@ class CommonLevelGenerator(ILevelGenerator):
             while (x, y) in occupied_positions:
                 x = random.randint(0, self.map_width - 1)
                 y = random.randint(corner_y - hallway_width, corner_y - 1)
-            enemies.append(
-                Monster(
-                    self.params_gen.generate_monster_params(section_number),
-                    Position(x, y),
-                    map,
-                    self.strategy_gen.generate_monster_strategy(),
-                )
+            enemy = Monster(
+                self.params_gen.generate_monster_params(section_number),
+                Position(x, y),
+                map,
+                self.strategy_gen.generate_monster_strategy(),
             )
+            if not map.add_object(enemy):
+                raise ValueError("Cannot place enemy on the map")
+            enemies.append(enemy)
             occupied_positions.add((x, y))
 
+        self.level_in_section = (self.level_in_section + 1) % levels_per_section
         return map, list(enemies), False

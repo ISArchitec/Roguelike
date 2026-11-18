@@ -36,7 +36,7 @@ class RandomLevelGeneratorLoader:
             for item in generator.strategy_gen.strategies_pool
         ]
         if isinstance(generator, CommonLevelGenerator):
-            return GeneratorData(
+            result = GeneratorData(
                 type=LevelGeneratorType.COMMON,
                 width=generator.map_width,
                 height=generator.map_height,
@@ -46,6 +46,10 @@ class RandomLevelGeneratorLoader:
                 corner_size_range=RangeData(*generator.corner_size_range),
                 enemies_range=RangeData(*generator.enemies_range),
             )
+            if generator.boss_generator is not None:
+                vars(result)["level_in_section"] = generator.level_in_section
+                vars(result)["boss"] = RandomLevelGeneratorLoader.save_to(generator.boss_generator)
+            return result
         return GeneratorData(
             type=LevelGeneratorType.BOSS,
             width=generator.map_width,
@@ -61,6 +65,8 @@ class RandomLevelGeneratorLoader:
     @staticmethod
     def load_from(data: GeneratorData) -> ILevelGenerator:
         """Recreate a supported generator from its saved configuration."""
+        from play_cycle import GlobalConfig
+
         params_gen = MonsterParamsGenerator([item.to_params() for item in data.params_pool])
         strategy_gen = MonsterStrategyGenerator(
             [RandomLevelGeneratorLoader._load_strategy(item) for item in data.strategies_pool]
@@ -74,7 +80,35 @@ class RandomLevelGeneratorLoader:
                 or data.attacks_pool is not None
             ):
                 raise ValueError("Invalid common level generator data")
-            return CommonLevelGenerator(
+            saved_boss = getattr(data, "boss", None)
+            saved_level = getattr(data, "level_in_section", None)
+            if saved_boss is None:
+                if saved_level is not None:
+                    raise ValueError("Invalid level in section")
+                config = GlobalConfig.get_instance()
+                boss_generator = BossLevelGenerator(
+                    data.width,
+                    data.height,
+                    data.hallway_width_range.minimum,
+                    MonsterParamsGenerator(config.get_boss_param_pool()),
+                    MonsterStrategyGenerator([SimpleMonsterStrategy()]),
+                    MonsterAttackGenerator(
+                        [
+                            config.get_boss_prizes(index).get_attack()
+                            for index in range(config.get_boss_prize_pool_size())
+                        ]
+                    ),
+                )
+                level_in_section = 1
+            else:
+                if saved_level is None or not 0 <= saved_level < 5:
+                    raise ValueError("Missing level in section")
+                restored_boss = RandomLevelGeneratorLoader.load_from(saved_boss)
+                if not isinstance(restored_boss, BossLevelGenerator):
+                    raise ValueError("Invalid boss generator data")
+                boss_generator = restored_boss
+                level_in_section = saved_level
+            generator = CommonLevelGenerator(
                 data.width,
                 data.height,
                 (data.hallway_width_range.minimum, data.hallway_width_range.maximum),
@@ -83,6 +117,10 @@ class RandomLevelGeneratorLoader:
                 params_gen,
                 strategy_gen,
             )
+            generator.boss_generator = boss_generator
+            generator.level_in_section = level_in_section
+            generator.legacy_progress = saved_boss is None
+            return generator
         if data.type is LevelGeneratorType.BOSS:
             if (
                 data.hallway_width is None

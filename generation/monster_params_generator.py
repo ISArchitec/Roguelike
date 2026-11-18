@@ -9,9 +9,10 @@ class MonsterParamsGenerator:
 
     def generate_monster_params(self, section_number: int) -> ActorParams:
         params = random.choice(self.params_pool)
+        multiplier = max(1, section_number)
         return ActorParams(
-            params.health * section_number,
-            params.defence * section_number,
-            params.attack * section_number,
+            params.health * multiplier,
+            params.defence * multiplier,
+            params.attack * multiplier,
             params.speed,
         )

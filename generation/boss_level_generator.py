@@ -37,7 +37,7 @@ class BossLevelGenerator(ILevelGenerator):
             (self.map_width - self.hallway_width) // 2,
             0,
             (self.map_width + self.hallway_width) // 2,
-            self.map_height - 1,
+            self.map_height,
             False,
         )
         hero.set_position(Position(self.map_width // 2, 0))
@@ -52,5 +52,7 @@ class BossLevelGenerator(ILevelGenerator):
                 self.attack_gen.generate_monster_attack(),
             )
         ]
+        if not map.add_object(enemies[0]):
+            raise ValueError("Cannot place boss on the map")
         # I love pyright so i have to copy list for it to be correct type
         return map, list(enemies), True

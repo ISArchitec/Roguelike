@@ -1,9 +1,16 @@
+from queue import Queue
 from unittest.mock import MagicMock, call
 
 import pytest
 
-from hero import Hero
-from map import Cell, Map
+from area_attacks import CircleAttack
+from bonuses import Certificate, OneTimeBonus
+from game import ActorParams
+from hero import Hero, IEvent, MovingEvent, SpecialAttackEvent
+from map import Cell, Map, MapBuilder
+from monster_strategies.simple_monster_strategy import SimpleMonsterStrategy
+from monsters import BossMonster, IMonsterStrategy, Monster
+from monsters.monster_action import MonsterAction
 from play_cycle import IModelSubscriber
 from positioning import Direction, ICellObject, Position
 
@@ -357,3 +364,144 @@ def test_draw_visits_all_cells_in_order(states):
     game_map.draw()
 
     assert console.method_calls == expected
+
+
+def test_hero_attacks_enemy_and_removes_it_when_defeated():
+    hero = Hero(ActorParams(20, 1, 5, 1), Position(0, 0), [], Queue())
+    cells = [Cell.create_new(Position(x, 0)) for x in range(2)]
+    cells[0].add_cell_object(hero)
+    game_map = Map.create_from(2, 1, cells, hero, MagicMock(spec=IModelSubscriber))
+    hero.set_map(game_map)
+    callback = MagicMock()
+    game_map.set_on_terminate_object(callback)
+    enemy = Monster(ActorParams(10, 0, 1, 1), Position(1, 0), game_map, SimpleMonsterStrategy())
+    assert game_map.add_object(enemy)
+
+    assert hero.try_move(Direction.RIGHT)
+    assert enemy.get_params().health == 5
+    assert hero.get_position() == Position(0, 0)
+    assert hero.try_move(Direction.RIGHT)
+    assert cells[1].empty()
+    callback.assert_called_once()
+
+
+def test_hero_collects_certificate_by_interacting():
+    hero = Hero(ActorParams(20, 1, 5, 1), Position(0, 0), [], Queue())
+    cells = [Cell.create_new(Position(x, 0)) for x in range(2)]
+    cells[0].add_cell_object(hero)
+    game_map = Map.create_from(2, 1, cells, hero, MagicMock(spec=IModelSubscriber))
+    hero.set_map(game_map)
+    callback = MagicMock()
+    game_map.set_on_terminate_object(callback)
+    certificate = Certificate(ActorParams(0, 0, 2, 0))
+    certificate.set_position(Position(1, 0))
+    certificate.set_on_pickup(lambda: hero.add_certificate(certificate))
+    assert game_map.add_object(certificate)
+
+    assert hero.try_move(Direction.RIGHT)
+    assert hero.get_params().attack == 7
+    assert list(hero.get_certificates()) == [certificate]
+    assert cells[1].empty()
+    callback.assert_called_once()
+
+
+def test_consumable_applies_all_modifiers_and_is_removed():
+    bonus = OneTimeBonus(ActorParams(5, 1, 2, 1))
+    hero = Hero(ActorParams(10, 1, 5, 1), Position(0, 0), [bonus], Queue())
+
+    hero.use_one_timer(0)
+
+    params = hero.get_params()
+    assert (params.health, params.defence, params.attack, params.speed) == (15, 2, 7, 2)
+    assert list(hero.get_one_time_bonuses()) == []
+
+
+def test_invalid_actions_do_not_consume_hero_turn():
+    events: Queue[IEvent] = Queue()
+    hero = Hero(ActorParams(20, 1, 5, 1), Position(0, 0), [], events)
+    cells = [Cell.create_new(Position(x, 0)) for x in range(2)]
+    cells[0].add_cell_object(hero)
+    game_map = Map.create_from(2, 1, cells, hero, MagicMock(spec=IModelSubscriber))
+    hero.set_map(game_map)
+    events.put(MovingEvent(Direction.LEFT))
+    events.put(SpecialAttackEvent())
+    events.put(MovingEvent(Direction.RIGHT))
+
+    hero.step()
+
+    assert hero.get_position() == Position(1, 0)
+    assert events.empty()
+
+
+def test_hero_death_does_not_notify_enemy_termination():
+    hero = Hero(ActorParams(5, 0, 1, 1), Position(0, 0), [], Queue())
+    cells = [Cell.create_new(Position(0, 0))]
+    cells[0].add_cell_object(hero)
+    game_map = Map.create_from(1, 1, cells, hero, MagicMock(spec=IModelSubscriber))
+    callback = MagicMock()
+    game_map.set_on_terminate_object(callback)
+
+    game_map.interact_direct(Position(0, 0), 5)
+
+    assert hero.is_inactive()
+    callback.assert_not_called()
+
+
+@pytest.mark.parametrize("boss", [False, True])
+def test_enemy_moves_towards_hero_then_attacks_with_remaining_actions(boss):
+    hero = Hero(ActorParams(20, 1, 5, 1), Position(2, 0), [], Queue())
+    builder = MapBuilder(3, 1)
+    builder.add_hero(hero)
+    game_map = builder.to_map(MagicMock(spec=IModelSubscriber))
+    game_map.set_on_terminate_object(lambda: None)
+    hero.set_map(game_map)
+    params = ActorParams(10, 0, 3, 2)
+    strategy = SimpleMonsterStrategy()
+    if boss:
+        enemy = BossMonster(params, Position(0, 0), game_map, strategy, CircleAttack(1, 3))
+    else:
+        enemy = Monster(params, Position(0, 0), game_map, strategy)
+    assert game_map.add_object(enemy)
+
+    enemy.step()
+
+    assert enemy.get_position() == Position(1, 0)
+    assert hero.get_params().health == 18
+
+    enemy.step()
+    assert enemy.get_position() == Position(1, 0)
+    assert hero.get_params().health == 14
+
+
+def test_boss_executes_special_attack_chosen_by_strategy():
+    hero = Hero(ActorParams(20, 0, 5, 1), Position(1, 0), [], Queue())
+    builder = MapBuilder(2, 1)
+    builder.add_hero(hero)
+    game_map = builder.to_map(MagicMock(spec=IModelSubscriber))
+    game_map.set_on_terminate_object(lambda: None)
+    strategy = MagicMock(spec=IMonsterStrategy)
+    strategy.action.return_value = [MonsterAction(None)]
+    boss = BossMonster(
+        ActorParams(30, 0, 3, 1), Position(0, 0), game_map, strategy, CircleAttack(1, 5)
+    )
+    assert game_map.add_object(boss)
+
+    boss.step()
+
+    assert hero.get_params().health == 15
+
+
+def test_monster_stops_harming_hero_after_lethal_attack():
+    hero = Hero(ActorParams(3, 0, 5, 1), Position(1, 0), [], Queue())
+    builder = MapBuilder(2, 1)
+    builder.add_hero(hero)
+    game_map = builder.to_map(MagicMock(spec=IModelSubscriber))
+    game_map.set_on_terminate_object(lambda: None)
+    monster = Monster(ActorParams(10, 0, 3, 3), Position(0, 0), game_map, SimpleMonsterStrategy())
+    assert game_map.add_object(monster)
+
+    monster.step()
+
+    assert hero.is_inactive()
+    assert hero.get_params().health == 0
+    assert monster.get_position() == Position(0, 0)
