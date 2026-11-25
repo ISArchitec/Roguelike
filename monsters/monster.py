@@ -25,6 +25,9 @@ class Monster(IEnemy):
     def get_strategy(self) -> IMonsterStrategy:
         return self._strategy
 
+    def get_map(self) -> IMap:
+        return self._map
+
     def set_map(self, map: IMap):
         self._map = map
 

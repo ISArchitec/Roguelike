@@ -30,6 +30,9 @@ class BossMonster(IEnemy):
     def get_strategy(self) -> IMonsterStrategy:
         return self._strategy
 
+    def get_map(self) -> IMap:
+        return self._map
+
     def get_attack(self) -> IAreaAttack:
         return self._attack
 
