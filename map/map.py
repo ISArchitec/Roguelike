@@ -148,8 +148,11 @@ class Map(IMap):
             return
         if self._on_terminate_object is None:
             raise RuntimeError("Object termination callback has not been set")
-        obj.interact(force)
+        replaced_obj = obj.interact(force)
         if obj.is_inactive():
             cell.remove_cell_object(obj)
             if obj is not self._hero:
                 self._on_terminate_object()
+        if replaced_obj != obj:
+            cell.remove_cell_object(obj)
+            cell.add_cell_object(replaced_obj)
