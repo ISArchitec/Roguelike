@@ -7,12 +7,17 @@ from positioning import Direction, ICellObject, IMap, Position
 
 
 class ConfusingDecorator(IEnemy):
-    def __init__(self, enemy: IEnemy):
+    def __init__(self, enemy: IEnemy, remaining_turns: int = 3):
+        if remaining_turns <= 0:
+            raise ValueError("Remaining confusion turns must be positive")
         self._enemy = enemy
-        self._remain_confusing = 3
+        self._remain_confusing = remaining_turns
 
     def unwrap(self) -> IEnemy:
         return self._enemy
+
+    def get_remaining_turns(self) -> int:
+        return self._remain_confusing
 
     def get_position(self) -> Position | None:
         return self._enemy.get_position()
@@ -41,7 +46,7 @@ class ConfusingDecorator(IEnemy):
     def step(self):
         for _ in range(self._enemy.get_params().speed):
             direction = random.choice(list(Direction))
-            self.get_map().move(self._enemy, direction)
+            self.get_map().move(self, direction)
         self._remain_confusing -= 1
         if self._remain_confusing == 0:
             self.get_map().replace_object(self, self._enemy)

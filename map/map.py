@@ -1,6 +1,7 @@
 from collections import deque
 from collections.abc import Callable
 
+from game import IActor
 from hero import Hero
 from map.cell import Cell
 from play_cycle import IModelSubscriber
@@ -20,6 +21,7 @@ class Map(IMap):
         self._cells = cells
         self._console = console
         self._on_terminate_object: Callable[[], None] | None = None
+        self._on_replace_object: Callable[[IActor, IActor], None] | None = None
         self._hero = hero
 
     @staticmethod
@@ -30,6 +32,9 @@ class Map(IMap):
 
     def set_on_terminate_object(self, callback: Callable[[], None]) -> None:
         self._on_terminate_object = callback
+
+    def set_on_replace_object(self, callback: Callable[[IActor, IActor], None]) -> None:
+        self._on_replace_object = callback
 
     def draw(self) -> None:
         for cell in self._cells:
@@ -92,6 +97,12 @@ class Map(IMap):
             return False
         cell.remove_cell_object(old)
         cell.add_cell_object(new)
+        if (
+            self._on_replace_object is not None
+            and isinstance(old, IActor)
+            and isinstance(new, IActor)
+        ):
+            self._on_replace_object(old, new)
         return True
 
     def is_valid_position(self, position: Position | None) -> bool:
@@ -164,6 +175,6 @@ class Map(IMap):
             cell.remove_cell_object(obj)
             if obj is not self._hero:
                 self._on_terminate_object()
-        if replaced_obj != obj:
-            cell.remove_cell_object(obj)
-            cell.add_cell_object(replaced_obj)
+            return
+        if replaced_obj is not obj:
+            self.replace_object(obj, replaced_obj)

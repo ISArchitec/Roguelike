@@ -39,6 +39,9 @@ class Game:
         self._map = map
         self._hero = hero
         self._actors: list[IActor] = [hero, *actors]
+        self._actor_indices: dict[int, int] = {}
+        for index, actor in enumerate(self._actors):
+            self._actor_indices.setdefault(id(actor), index)
         self._ticks = ticks
         self._is_stopped = False
         self._console = console
@@ -48,6 +51,7 @@ class Game:
         self._reward_placed = reward_placed
         self._save_date = save_date
         self._map.set_on_terminate_object(self._count_down_on_terminate)
+        self._map.set_on_replace_object(self._replace_actor)
         for card in self._hero.get_id_cards():
             card.set_tick_getter(self.get_ticks)
 
@@ -192,6 +196,14 @@ class Game:
         else:
             self._enemy_count -= 1
 
+    def _replace_actor(self, old: IActor, new: IActor) -> None:
+        index = self._actor_indices.get(id(old))
+        if index is None or self._actors[index] is not old:
+            return
+        self._actors[index] = new
+        del self._actor_indices[id(old)]
+        self._actor_indices[id(new)] = index
+
     @staticmethod
     def _create_initial_inventory(config: GlobalConfig) -> list[OneTimeBonus]:
         pool_size = config.get_initial_thing_pool_size()
@@ -240,12 +252,16 @@ class Game:
             section_passed, self._hero, self._console
         )
         new_map.set_on_terminate_object(self._count_down_on_terminate)
+        new_map.set_on_replace_object(self._replace_actor)
         self._hero.reset_id_card()
         self._hero.set_map(new_map)
         self._section_passed = section_passed
         self._is_section_end = is_section_end
         self._map = new_map
         self._actors = [self._hero, *enemies]
+        self._actor_indices = {}
+        for index, actor in enumerate(self._actors):
+            self._actor_indices.setdefault(id(actor), index)
         self._enemy_count = len(enemies)
         self._thing_got = 1
         self._reward_placed = False
