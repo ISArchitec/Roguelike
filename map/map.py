@@ -83,6 +83,17 @@ class Map(IMap):
             return False
         return cell.add_cell_object(obj)
 
+    def replace_object(self, old: ICellObject, new: ICellObject) -> bool:
+        position = old.get_position()
+        if position is None:
+            return False
+        cell = self._get_cell(position)
+        if cell is None or not cell.check_in(old):
+            return False
+        cell.remove_cell_object(old)
+        cell.add_cell_object(new)
+        return True
+
     def is_valid_position(self, position: Position | None) -> bool:
         return (
             position is not None

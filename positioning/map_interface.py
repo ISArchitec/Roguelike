@@ -29,3 +29,7 @@ class IMap(ABC):
     @abstractmethod
     def find_path_to_hero(self, position: Position | None) -> list[Direction]:
         pass
+
+    @abstractmethod
+    def replace_object(self, old: ICellObject, new: ICellObject) -> bool:
+        pass
