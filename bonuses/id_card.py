@@ -33,10 +33,11 @@ class IDCard(ICellObject):
     def set_on_pickup(self, callback: Callable[[], None]) -> None:
         self._on_pickup = callback
 
-    def interact(self, force: int):
+    def interact(self, force: int) -> ICellObject:
         if self._on_pickup is not None:
             self._on_pickup()
             self._on_pickup = None
+        return self
 
     def is_inactive(self) -> bool:
         return self._on_pickup is None

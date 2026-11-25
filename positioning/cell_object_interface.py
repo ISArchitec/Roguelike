@@ -13,7 +13,7 @@ class ICellObject(ABC):
         pass
 
     @abstractmethod
-    def interact(self, force: int):
+    def interact(self, force: int) -> "ICellObject":
         pass
 
     @abstractmethod

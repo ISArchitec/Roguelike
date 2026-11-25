@@ -64,8 +64,9 @@ class Hero(IActor, ICellObject):
     def set_position(self, position: Position) -> None:
         self._position = position
 
-    def interact(self, force: int):
+    def interact(self, force: int) -> ICellObject:
         self._params = self._params.get_hit(force)
+        return self
 
     def is_inactive(self) -> bool:
         return self._params.health <= 0
