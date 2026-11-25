@@ -1,3 +1,4 @@
+from random import randint
 from typing import cast
 
 from game import ActorParams
@@ -31,7 +32,10 @@ class Monster(IEnemy):
         self._position = position
 
     def interact(self, force: int) -> ICellObject:
+        health = self._params.health
         self._params = self._params.get_hit(force)
+        if force > randint(0, health):
+            pass
         return self
 
     def is_inactive(self) -> bool:
