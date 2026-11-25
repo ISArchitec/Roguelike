@@ -2,6 +2,7 @@ from random import randint
 from typing import cast
 
 from game import ActorParams
+from monsters.confusing_decorator import ConfusingDecorator
 from monsters.enemy_interface import IEnemy
 from monsters.monster_strategy_interface import IMonsterStrategy
 from positioning import Direction, ICellObject, IMap, Position
@@ -37,8 +38,8 @@ class Monster(IEnemy):
     def interact(self, force: int) -> ICellObject:
         health = self._params.health
         self._params = self._params.get_hit(force)
-        if force > randint(0, health):
-            pass
+        if force > randint(health // 2, health):
+            return ConfusingDecorator(self)
         return self
 
     def is_inactive(self) -> bool:

@@ -158,6 +158,7 @@ class ActorData:
     type: ActorType
     params: ParamsData
     position: PositionData
+    wrapped: bool
     inventory: InventoryData | None = None
     strategy: StrategyType | None = None
     attack: AttackData | None = None
