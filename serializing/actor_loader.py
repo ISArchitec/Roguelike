@@ -39,7 +39,11 @@ class IActorLoader:
         params = ParamsData.from_params(actor.get_params())
         if isinstance(actor, Hero):
             return ActorData(
-                ActorType.HERO, params, position, False, inventory=IActorLoader._save_inventory(actor)
+                ActorType.HERO,
+                params,
+                position,
+                False,
+                inventory=IActorLoader._save_inventory(actor),
             )
         if type(actor.get_strategy()) is not SimpleMonsterStrategy:
             raise ValueError(f"Unsupported monster strategy: {type(actor.get_strategy()).__name__}")

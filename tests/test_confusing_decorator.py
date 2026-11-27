@@ -19,9 +19,7 @@ def make_confused_monster(remaining_turns=3):
     builder = MapBuilder(3, 3)
     builder.add_hero(hero)
     game_map = builder.to_map(MagicMock(spec=IModelSubscriber))
-    monster = Monster(
-        ActorParams(10, 0, 1, 1), Position(1, 1), game_map, SimpleMonsterStrategy()
-    )
+    monster = Monster(ActorParams(10, 0, 1, 1), Position(1, 1), game_map, SimpleMonsterStrategy())
     confused = ConfusingDecorator(monster, remaining_turns)
     game_map.add_object(confused)
     return game_map, monster, confused

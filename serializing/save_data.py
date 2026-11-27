@@ -384,7 +384,9 @@ class SaveDataCodec:
     def _actor(data) -> ActorData:
         common = {"type", "params", "position"}
         SaveDataCodec._fields(
-            data, common, frozenset({"inventory", "strategy", "attack", "wrapped", "confusion_turns"})
+            data,
+            common,
+            frozenset({"inventory", "strategy", "attack", "wrapped", "confusion_turns"}),
         )
         kind = ActorType(SaveDataCodec._string(data["type"]))
         required = common | ({"inventory"} if kind is ActorType.HERO else {"strategy"})
