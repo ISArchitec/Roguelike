@@ -22,34 +22,44 @@ class BossMonster(IEnemy):
         self._attack = attack
 
     def get_position(self):
+        """Return the boss's current position."""
         return self._position
 
     def get_params(self) -> ActorParams:
+        """Return the boss's current parameters."""
         return self._params
 
     def get_strategy(self) -> IMonsterStrategy:
+        """Return the boss's action strategy."""
         return self._strategy
 
     def get_map(self) -> IMap:
+        """Return the map containing the boss."""
         return self._map
 
     def get_attack(self) -> IAreaAttack:
+        """Return the boss's special attack."""
         return self._attack
 
     def set_map(self, map: IMap):
+        """Set the map used for the boss's actions."""
         self._map = map
 
     def set_position(self, position: Position) -> None:
+        """Set the boss's position."""
         self._position = position
 
     def interact(self, force: int) -> ICellObject:
+        """Apply a hit of force and return the boss."""
         self._params = self._params.get_hit(force)
         return self
 
     def is_inactive(self) -> bool:
+        """Return whether the boss's health is nonpositive."""
         return self._params.health <= 0
 
     def step(self):
+        """Perform the boss's strategy actions, including movement and special attacks."""
         action_list = self._strategy.action(
             self._map,
             self._position,

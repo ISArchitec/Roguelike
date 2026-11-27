@@ -7,9 +7,11 @@ class WaveAttack(IAreaAttack):
         self._forces = forces.copy()
 
     def get_forces(self) -> tuple[int, ...]:
+        """Return wave damage values by distance from the center."""
         return tuple(self._forces)
 
     def special_attack(self, map: IMap, position: Position):
+        """Hit cells around the center with the corresponding wave damage."""
         x = position.get_x()
         y = position.get_y()
         radius = len(self._forces)

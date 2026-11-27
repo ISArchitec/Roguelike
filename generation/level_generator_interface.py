@@ -11,5 +11,6 @@ class ILevelGenerator(ABC):
     def generate_level(
         self, section_number: int, hero: Hero, console: IModelSubscriber
     ) -> tuple[Map, list[IEnemy], bool]:
+        """Return the level map, enemies, and whether it ends the section."""
         # Последний элемент результата указывает, завершает ли созданный уровень секцию.
         pass

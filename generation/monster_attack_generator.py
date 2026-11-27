@@ -8,4 +8,5 @@ class MonsterAttackGenerator:
         self.attack_pool = attack_pool
 
     def generate_monster_attack(self) -> IAreaAttack:
+        """Choose a special attack at random from the pool."""
         return random.choice(self.attack_pool)
