@@ -33,13 +33,20 @@ else Перемещение невозможно
         note right of Object
           Живое существо получает урон.
           Награда вызывает callback подбора.
+          Обычный Monster при force > randint(health_before // 2, health_before)
+          возвращает ConfusingDecorator; защита уменьшает урон, но не порог контузии.
         end note
         Map -> Object: is_inactive()
-        opt Объект погиб или награда подобрана
+        alt Объект погиб или награда подобрана
             Map -> Target: remove_cell_object(object)
             opt Удалённый объект — не герой
                 Map -> Game: _count_down_on_terminate() через callback
             end
+        else Живой Monster получил контузию
+            Map -> Map: replace_object(monster, ConfusingDecorator)
+            Map -> Target: remove_cell_object(monster)
+            Map -> Target: add_cell_object(ConfusingDecorator)
+            Map -> Game: _replace_actor(monster, ConfusingDecorator) через callback
         end
         Map --> Hero: True
     else Нет допустимой цели

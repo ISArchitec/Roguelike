@@ -23,6 +23,7 @@ alt Новая игра
     ref over Game, Generator: Генерация уровня
     Game -> Hero: set_map(map)
     Game -> Map: set_on_terminate_object(callback)
+    Game -> Map: set_on_replace_object(callback)
     Game -> Config: register_save(save_date)
 else Загрузка
     ref over Console: Загрузка игры
@@ -46,7 +47,8 @@ loop Пока игра не остановлена
             ref over Game, Generator: Генерация уровня
             Game -> Hero: reset_id_card(); set_map(new_map)
             Game -> Map: set_on_terminate_object(callback)
-            Game -> Game: заменить участников, enemy_count; thing_got = 1
+            Game -> Map: set_on_replace_object(callback)
+            Game -> Game: заменить участников и actor_indices, enemy_count; thing_got = 1
         end
     else Врагов нет и награда ещё не размещена
         ref over Game, Hero: Размещение награды на карте

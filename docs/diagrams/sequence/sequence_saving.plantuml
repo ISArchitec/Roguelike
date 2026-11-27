@@ -24,6 +24,7 @@ GeneratorLoader --> GameLoader: состояние генератора и level
 loop Герой и враги
     GameLoader -> ActorLoader: save_to(actor)
     ActorLoader --> GameLoader: характеристики, позиция, инвентарь / стратегия / атака
+    note right of ActorLoader: Для ConfusingDecorator: wrapped=true и confusion_turns=оставшиеся ходы.
 end
 GameLoader -> MapLoader: save_to(map, actors)
 loop Клетки в порядке индекса
