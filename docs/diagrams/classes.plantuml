@@ -63,6 +63,7 @@ interface IMap {
     + move(o: ICellObject, direction: Direction): Bool
     + interact(o: ICellObject, direction: Direction, force: Int): Bool
     + interact_direct(position: Position, force: Int)
+    + replace_object(old: ICellObject, new: ICellObject): Bool
     + is_valid_position(position: Optional<Position>): Bool
     + get_hero_position(): Position
     + find_path_to_hero(position: Optional<Position>): List<Direction>
@@ -182,13 +183,16 @@ class Map {
     - hero: Hero
     - cells: List<Cell>
     - on_terminate_object: Optional<Callable>
+    - on_replace_object: Optional<Callable>
     {static} + create_from(width: Int, height: Int, cells: List<Cell>, hero: Hero, console: IModelSubscriber): Map
     + set_on_terminate_object(callback: Callable)
+    + set_on_replace_object(callback: Callable)
     + draw()
     + move(o: ICellObject, direction: Direction): Bool
     + interact(o: ICellObject, direction: Direction, force: Int): Bool
     + interact_direct(position: Position, force: Int)
     + add_object(o: ICellObject): Bool
+    + replace_object(old: ICellObject, new: ICellObject): Bool
     + get_hero(): Hero
     + get_cells(): Tuple<Cell>
     + find_path_to_hero(position: Optional<Position>): List<Direction>
@@ -229,10 +233,20 @@ class BossMonster {
     + step()
     + set_map(map: IMap)
 }
+class ConfusingDecorator {
+    - enemy: IEnemy
+    - remain_confusing: Int
+    + constructor(enemy: IEnemy, remaining_turns: Int = 3)
+    + unwrap(): IEnemy
+    + get_remaining_turns(): Int
+    + step()
+}
 IEnemy --|> IActor
 IEnemy --|> ICellObject
 Monster ..|> IEnemy
 BossMonster ..|> IEnemy
+ConfusingDecorator ..|> IEnemy
+ConfusingDecorator o--> IEnemy : wraps
 Monster --> IMonsterStrategy
 BossMonster --> IMonsterStrategy
 BossMonster --> IAreaAttack
@@ -282,6 +296,8 @@ class Game {
     - is_section_end: Bool
     - reward_placed: Bool
     - save_date: datetime
+    - actors: List<IActor>
+    - actor_indices: Dict<Int, Int>
     {static} + create_new(generator: ILevelGenerator, event_queue: Queue<IEvent>, console: IModelSubscriber): Game
     {static} + create_from(section_passed, generator, map, actors, ticks, hero, console, enemy_count, thing_got, is_section_end, reward_placed, save_date): Game
     + run_game()
@@ -295,12 +311,13 @@ class Game {
     + get_map(): Map
     - _tick()
     - _count_down_on_terminate()
+    - _replace_actor(old: IActor, new: IActor)
     - _place_level_reward()
     - _advance_level()
 }
 note right of Game
   Генератор возвращает карту, врагов и конец секции.
-  Game задаёт карте callback учёта удалённых объектов.
+  Game задаёт карте callbacks удаления и замены актёров.
   После врагов награда размещается на карте.
   Переход / победа — только после её подбора.
   IDCard получает Game.get_ticks как часы.

@@ -30,6 +30,7 @@ MapLoader --> GameLoader: map с наградами, пока без участ�
 GameLoader -> Hero: set_map(map)
 loop Остальные участники
     GameLoader -> ActorLoader: load_from(actor_data, event_queue, map)
+    note right of ActorLoader: wrapped=true создаёт ConfusingDecorator с сохранённым confusion_turns (при его отсутствии — 3).
     ActorLoader --> GameLoader: enemy
 end
 GameLoader -> MapLoader: place_actors(map_data, map, actors)
@@ -38,6 +39,7 @@ GameLoader -> Game: create_from(..., save_date)
 Game -> Config: is_save_actual(save_date)
 Config --> Game: True / иначе ValueError
 Game -> Map: set_on_terminate_object(callback)
+Game -> Map: set_on_replace_object(callback)
 Game -> Hero: get_id_cards()
 Game -> Game: привязать tick_getter удостоверений к get_ticks()
 GameLoader -> GameLoader: восстановить callbacks подбора наград на карте\nи tick_getter лежащих удостоверений

@@ -10,7 +10,7 @@ from bonuses import Certificate, IDCard, OneTimeBonus
 from game import ActorParams
 from generation import ILevelGenerator
 from hero import Hero
-from map import Map
+from map import Cell, Map
 from monsters import IEnemy
 from play_cycle import GlobalConfig, IModelSubscriber
 from play_cycle.game import Game
@@ -203,6 +203,56 @@ def test_next_level_replaces_map_and_enemies(dependencies, build_game):
     game.run_game()
     dependencies.hero.set_map.assert_called_once_with(new_map)
     new_enemy.step.assert_called_once_with()
+
+
+def test_actor_replacements_follow_latest_object(dependencies, build_game):
+    dependencies.hero.get_position.return_value = Position(0, 0)
+    dependencies.enemy.get_position.return_value = Position(1, 0)
+    game_map = Map.create_from(
+        2,
+        1,
+        [
+            Cell.create_from(Position(0, 0), dependencies.hero, False),
+            Cell.create_from(Position(1, 0), dependencies.enemy, False),
+        ],
+        dependencies.hero,
+        dependencies.console,
+    )
+    game = build_game(map=game_map)
+    first = MagicMock(spec=IEnemy)
+    first.get_position.return_value = Position(1, 0)
+    second = MagicMock(spec=IEnemy)
+    second.get_position.return_value = Position(1, 0)
+
+    game_map.replace_object(dependencies.enemy, first)
+    game_map.replace_object(first, second)
+    assert game.get_actors() == (dependencies.hero, second)
+
+
+def test_next_level_rebuilds_actor_replacement_index(dependencies, build_game):
+    dependencies.hero.get_position.return_value = Position(0, 0)
+    new_enemy = MagicMock(spec=IEnemy)
+    new_enemy.get_position.return_value = Position(1, 0)
+    new_enemy.is_inactive.return_value = False
+    new_map = Map.create_from(
+        2,
+        1,
+        [
+            Cell.create_from(Position(0, 0), dependencies.hero, False),
+            Cell.create_from(Position(1, 0), new_enemy, False),
+        ],
+        dependencies.hero,
+        dependencies.console,
+    )
+    dependencies.generator.generate_level.return_value = (new_map, [new_enemy], False)
+    game = build_game(enemy_count=0, thing_got=0)
+    dependencies.hero.step.side_effect = game.stop
+    game.run_game()
+    replacement = MagicMock(spec=IEnemy)
+    replacement.get_position.return_value = Position(1, 0)
+
+    assert new_map.replace_object(new_enemy, replacement)
+    assert game.get_actors() == (dependencies.hero, replacement)
 
 
 def test_next_level_resets_victory(dependencies, build_game):

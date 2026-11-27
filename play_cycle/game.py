@@ -39,6 +39,9 @@ class Game:
         self._map = map
         self._hero = hero
         self._actors: list[IActor] = [hero, *actors]
+        self._actor_indices: dict[int, int] = {}
+        for index, actor in enumerate(self._actors):
+            self._actor_indices.setdefault(id(actor), index)
         self._ticks = ticks
         self._is_stopped = False
         self._console = console
@@ -48,6 +51,7 @@ class Game:
         self._reward_placed = reward_placed
         self._save_date = save_date
         self._map.set_on_terminate_object(self._count_down_on_terminate)
+        self._map.set_on_replace_object(self._replace_actor)
         for card in self._hero.get_id_cards():
             card.set_tick_getter(self.get_ticks)
 
@@ -55,6 +59,7 @@ class Game:
     def create_new(
         level_generator: ILevelGenerator, event_queue: Queue[IEvent], console: IModelSubscriber
     ) -> "Game":
+        """Create a game with a new level, hero, and registered save date."""
         config = GlobalConfig.get_instance()
         params = config.get_initial_hero_params()
         one_timers = Game._create_initial_inventory(config)
@@ -94,6 +99,7 @@ class Game:
         reward_placed: bool,
         save_date: datetime,
     ) -> "Game":
+        """Restore a game from state if its save date is still valid."""
         if not GlobalConfig.get_instance().is_save_actual(save_date):
             raise ValueError("Save is no longer valid or was never registered")
         return Game(
@@ -112,6 +118,7 @@ class Game:
         )
 
     def run_game(self) -> None:
+        """Run turns until stopped, victorious, or the hero dies."""
         while not self._is_stopped:
             if self.has_lost_level():
                 GlobalConfig.get_instance().invalidate_save(self._save_date)
@@ -128,12 +135,15 @@ class Game:
             self._tick()
 
     def has_won_level(self) -> bool:
+        """Return whether all enemies are defeated and all level items collected."""
         return self._enemy_count == 0 and self._thing_got == 0
 
     def has_lost_level(self) -> bool:
+        """Return whether the hero has died on this level."""
         return self._hero.is_inactive()
 
     def has_won_totally(self) -> bool:
+        """Return whether winning this level completes the final section."""
         return (
             self.has_won_level()
             and self._is_section_end
@@ -141,12 +151,15 @@ class Game:
         )
 
     def stop(self) -> None:
+        """Stop the game loop after the current step."""
         self._is_stopped = True
 
     def get_ticks(self) -> int:
+        """Return the number of completed game turns."""
         return self._ticks
 
     def get_save_date(self) -> datetime:
+        """Return the date used to validate this game's save."""
         return self._save_date
 
     def _tick(self) -> None:
@@ -158,30 +171,39 @@ class Game:
         self._map.draw()
 
     def get_section_passed(self) -> int:
+        """Return the number of completed sections."""
         return self._section_passed
 
     def get_level_generator(self) -> ILevelGenerator:
+        """Return this game's level generator."""
         return self._level_generator
 
     def get_map(self) -> Map:
+        """Return the current level's map."""
         return self._map
 
     def get_actors(self) -> tuple[IActor, ...]:
+        """Return current actors, starting with the hero."""
         return tuple(self._actors)
 
     def get_hero(self) -> Hero:
+        """Return this game's hero."""
         return self._hero
 
     def get_enemy_count(self) -> int:
+        """Return the number of enemies still alive."""
         return self._enemy_count
 
     def get_thing_got(self) -> int:
+        """Return the number of items still to be collected."""
         return self._thing_got
 
     def get_is_section_end(self) -> bool:
+        """Return whether the current level ends its section."""
         return self._is_section_end
 
     def get_reward_placed(self) -> bool:
+        """Return whether a reward has been placed on this level."""
         return self._reward_placed
 
     def _count_down_on_terminate(self) -> None:
@@ -191,6 +213,14 @@ class Game:
             self._thing_got -= 1
         else:
             self._enemy_count -= 1
+
+    def _replace_actor(self, old: IActor, new: IActor) -> None:
+        index = self._actor_indices.get(id(old))
+        if index is None or self._actors[index] is not old:
+            return
+        self._actors[index] = new
+        del self._actor_indices[id(old)]
+        self._actor_indices[id(new)] = index
 
     @staticmethod
     def _create_initial_inventory(config: GlobalConfig) -> list[OneTimeBonus]:
@@ -240,12 +270,16 @@ class Game:
             section_passed, self._hero, self._console
         )
         new_map.set_on_terminate_object(self._count_down_on_terminate)
+        new_map.set_on_replace_object(self._replace_actor)
         self._hero.reset_id_card()
         self._hero.set_map(new_map)
         self._section_passed = section_passed
         self._is_section_end = is_section_end
         self._map = new_map
         self._actors = [self._hero, *enemies]
+        self._actor_indices = {}
+        for index, actor in enumerate(self._actors):
+            self._actor_indices.setdefault(id(actor), index)
         self._enemy_count = len(enemies)
         self._thing_got = 1
         self._reward_placed = False

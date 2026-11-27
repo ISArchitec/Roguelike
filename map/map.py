@@ -1,6 +1,7 @@
 from collections import deque
 from collections.abc import Callable
 
+from game import IActor
 from hero import Hero
 from map.cell import Cell
 from play_cycle import IModelSubscriber
@@ -20,18 +21,26 @@ class Map(IMap):
         self._cells = cells
         self._console = console
         self._on_terminate_object: Callable[[], None] | None = None
+        self._on_replace_object: Callable[[IActor, IActor], None] | None = None
         self._hero = hero
 
     @staticmethod
     def create_from(
         width: int, height: int, cells: list[Cell], hero: Hero, console: IModelSubscriber
     ) -> "Map":
+        """Create a map from its dimensions, cells, hero, and event subscriber."""
         return Map(width, height, cells, hero, console)
 
     def set_on_terminate_object(self, callback: Callable[[], None]) -> None:
+        """Set the callback invoked when a defeated object is removed."""
         self._on_terminate_object = callback
 
+    def set_on_replace_object(self, callback: Callable[[IActor, IActor], None]) -> None:
+        """Set the callback invoked when one actor replaces another."""
+        self._on_replace_object = callback
+
     def draw(self) -> None:
+        """Send walls and map occupants to the event subscriber for rendering."""
         for cell in self._cells:
             if cell.is_wall():
                 self._console.draw_passage(cell.position)
@@ -42,6 +51,7 @@ class Map(IMap):
                     self._console.draw_object(obj)
 
     def move(self, obj: ICellObject, direction: Direction) -> bool:
+        """Move an object into a free neighboring cell and report success."""
         position = obj.get_position()
         if position is None:
             return False
@@ -59,6 +69,7 @@ class Map(IMap):
         return True
 
     def interact(self, obj: ICellObject, direction: Direction, force: int) -> bool:
+        """Attack an occupied neighboring cell on behalf of an object and report success."""
         position = obj.get_position()
         if position is None:
             return False
@@ -73,17 +84,38 @@ class Map(IMap):
         return True
 
     def interact_direct(self, position: Position, force: int) -> None:
+        """Apply a hit to the specified cell if it is accessible."""
         cell = self._get_cell(position)
         if cell is not None and not cell.is_wall():
             self._hit_cell(cell, force)
 
     def add_object(self, obj: ICellObject) -> bool:
+        """Place an object in the free cell at its position and report success."""
         cell = self._get_cell(obj.get_position())
         if cell is None or cell.is_wall():
             return False
         return cell.add_cell_object(obj)
 
+    def replace_object(self, old: ICellObject, new: ICellObject) -> bool:
+        """Replace an object in its cell, notify about actor changes, and report success."""
+        position = old.get_position()
+        if position is None:
+            return False
+        cell = self._get_cell(position)
+        if cell is None or not cell.check_in(old):
+            return False
+        cell.remove_cell_object(old)
+        cell.add_cell_object(new)
+        if (
+            self._on_replace_object is not None
+            and isinstance(old, IActor)
+            and isinstance(new, IActor)
+        ):
+            self._on_replace_object(old, new)
+        return True
+
     def is_valid_position(self, position: Position | None) -> bool:
+        """Check whether a position lies within the map bounds."""
         return (
             position is not None
             and 0 <= position.get_x() < self._width
@@ -91,21 +123,27 @@ class Map(IMap):
         )
 
     def get_hero(self) -> Hero:
+        """Return the hero on this map."""
         return self._hero
 
     def get_width(self) -> int:
+        """Return the map width in cells."""
         return self._width
 
     def get_height(self) -> int:
+        """Return the map height in cells."""
         return self._height
 
     def get_cells(self) -> tuple[Cell, ...]:
+        """Return the map cells as a tuple."""
         return tuple(self._cells)
 
     def get_hero_position(self) -> Position:
+        """Return the current position of the hero."""
         return self.get_hero().get_position()
 
     def find_path_to_hero(self, position: Position | None) -> list[Direction]:
+        """Find the shortest path to the hero around walls and occupied cells."""
         source = self._get_cell(position)
         if position is None or source is None or source.is_wall():
             return []
@@ -148,8 +186,11 @@ class Map(IMap):
             return
         if self._on_terminate_object is None:
             raise RuntimeError("Object termination callback has not been set")
-        obj.interact(force)
+        replaced_obj = obj.interact(force)
         if obj.is_inactive():
             cell.remove_cell_object(obj)
             if obj is not self._hero:
                 self._on_terminate_object()
+            return
+        if replaced_obj is not obj:
+            self.replace_object(obj, replaced_obj)

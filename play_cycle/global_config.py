@@ -25,53 +25,69 @@ class GlobalConfig:
 
     @staticmethod
     def get_instance() -> "GlobalConfig":
+        """Return the shared configuration instance, creating it on first use."""
         if GlobalConfig._config is None:
             GlobalConfig._config = GlobalConfig()
         return GlobalConfig._config
 
     def get_map_size(self) -> tuple[int, int]:
+        """Return the configured map width and height."""
         return self._map_size
 
     def get_initial_hero_params(self) -> ActorParams:
+        """Return the hero's initial parameters."""
         return self._initial_hero_params
 
     def get_monster_param_pool(self) -> list[ActorParams]:
+        """Return the pool of parameters for generated monsters."""
         return self._monster_param_pool
 
     def get_boss_param_pool(self) -> list[ActorParams]:
+        """Return the pool of parameters for generated bosses."""
         return self._boss_param_pool
 
     def get_object_view(self, obj: ICellObject) -> str:
+        """Return the display symbol for the object's exact type."""
         return self._object_view[type(obj)]
 
     def get_boss_strategies(self) -> Iterator[str]:
+        """Return an iterator over available boss strategy names."""
         return iter(self._boss_strategies)
 
     def get_boss_strategy(self, name: str) -> Callable[[], IMonsterStrategy]:
+        """Return the boss strategy constructor for a name."""
         return self._boss_strategies[name]
 
     def get_boss_prizes(self, index: int) -> IDCard:
+        """Return the boss reward ID card at the given index."""
         return self._boss_id_cards[index]
 
     def get_boss_prize_pool_size(self) -> int:
+        """Return the number of boss reward ID cards."""
         return len(self._boss_id_cards)
 
     def get_certificate(self, index: int) -> Certificate:
+        """Return the reward certificate at the given index."""
         return self._certificates[index]
 
     def get_certificate_pool_size(self) -> int:
+        """Return the number of reward certificates."""
         return len(self._certificates)
 
     def get_special_thing(self, index: int) -> OneTimeBonus:
+        """Return the initial one-time bonus at the given index."""
         return self._initial_thing_pool[index]
 
     def get_initial_thing_count(self) -> int:
+        """Return the number of one-time bonuses initially given to the hero."""
         return self._initial_thing_count
 
     def get_initial_thing_pool_size(self) -> int:
+        """Return the size of the initial bonus pool."""
         return len(self._initial_thing_pool)
 
     def register_save(self, save_date: datetime) -> None:
+        """Register a timezone-aware save date as valid."""
         if save_date.tzinfo is None or save_date.utcoffset() is None:
             raise ValueError("Save date must include a timezone")
         if save_date in self._actual_saves:
@@ -79,9 +95,11 @@ class GlobalConfig:
         self._write_actual_saves(self._actual_saves | {save_date.astimezone(UTC)})
 
     def is_save_actual(self, save_date: datetime) -> bool:
+        """Return whether the save date is registered as valid."""
         return save_date in self._actual_saves
 
     def invalidate_save(self, save_date: datetime) -> None:
+        """Remove the save date from the set of valid dates."""
         if save_date in self._actual_saves:
             self._write_actual_saves(self._actual_saves - {save_date})
 

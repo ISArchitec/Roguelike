@@ -8,4 +8,5 @@ class MonsterStrategyGenerator:
         self.strategies_pool = strategies_pool
 
     def generate_monster_strategy(self) -> IMonsterStrategy:
+        """Choose a monster strategy at random from the pool."""
         return random.choice(self.strategies_pool)

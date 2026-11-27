@@ -16,6 +16,7 @@ class SimpleMonsterStrategy(IMonsterStrategy):
         special_attack: IAreaAttack | None,
         speed: int,
     ) -> list[MonsterAction]:
+        """Build movement actions toward the hero within the speed limit."""
         path = map.find_path_to_hero(monster_position)
         if len(path) == 0:
             return []

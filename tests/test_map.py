@@ -22,6 +22,7 @@ def make_object(x, y, inactive=False, spec=ICellObject):
         obj.get_position, "return_value", position
     )
     obj.is_inactive.return_value = inactive
+    obj.interact.return_value = obj
     return obj
 
 

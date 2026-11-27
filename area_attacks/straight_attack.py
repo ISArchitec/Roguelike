@@ -9,15 +9,19 @@ class StraightAttack(IAreaAttack):
         self._direction = direction
 
     def get_length(self) -> int:
+        """Return the length of the straight attack in cells."""
         return self._length
 
     def get_force(self) -> int:
+        """Return the configured attack force."""
         return self._force
 
     def get_direction(self) -> Direction:
+        """Return the direction of the straight attack."""
         return self._direction
 
     def special_attack(self, map: IMap, position: Position):
+        """Hit cells along a line from the starting position."""
         target_position = position
         for _i in range(self._length):
             target_position = target_position.move(self._direction)

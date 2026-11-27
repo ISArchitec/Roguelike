@@ -15,4 +15,5 @@ class IMonsterStrategy(ABC):
         special_attack: IAreaAttack | None,
         speed: int,
     ) -> list[MonsterAction]:
+        """Return monster actions based on the map, positions, attack, and speed."""
         pass

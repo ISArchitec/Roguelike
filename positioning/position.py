@@ -11,12 +11,15 @@ class Position:
         return self._x == other.get_x() and self._y == other.get_y()
 
     def get_x(self):
+        """Return the horizontal coordinate."""
         return self._x
 
     def get_y(self):
+        """Return the vertical coordinate."""
         return self._y
 
     def move(self, direction: Direction):
+        """Return a new position one step in the given direction."""
         match direction:
             case Direction.DOWN:
                 return Position(self._x, self._y - 1)
@@ -28,4 +31,5 @@ class Position:
                 return Position(self._x + 1, self._y)
 
     def get_distance(self, x: int, y: int):
+        """Return the Manhattan distance to the given coordinates."""
         return abs(self._x - x) + abs(self._y - y)

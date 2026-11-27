@@ -29,6 +29,7 @@ class BossLevelGenerator(ILevelGenerator):
     def generate_level(
         self, section_number: int, hero: Hero, console: IModelSubscriber
     ) -> tuple[Map, list[IEnemy], bool]:
+        """Create a hallway level with the hero and a boss that ends the section."""
         # For now there will be only one type of map.
         # In the future, there can be randomly generated type of map
         # Simple hallway from top to bottom

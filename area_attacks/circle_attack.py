@@ -8,12 +8,15 @@ class CircleAttack(IAreaAttack):
         self._force = force
 
     def get_radius(self) -> int:
+        """Return the attack radius in cells."""
         return self._radius
 
     def get_force(self) -> int:
+        """Return the configured attack force."""
         return self._force
 
     def special_attack(self, map: IMap, position: Position):
+        """Hit every cell within the Manhattan radius except the center."""
         x = position.get_x()
         y = position.get_y()
         for i in range(x - self._radius, x + self._radius + 1):

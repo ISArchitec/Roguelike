@@ -158,9 +158,11 @@ class ActorData:
     type: ActorType
     params: ParamsData
     position: PositionData
+    wrapped: bool
     inventory: InventoryData | None = None
     strategy: StrategyType | None = None
     attack: AttackData | None = None
+    confusion_turns: int | None = None
 
 
 @dataclass
@@ -381,21 +383,29 @@ class SaveDataCodec:
     @staticmethod
     def _actor(data) -> ActorData:
         common = {"type", "params", "position"}
-        SaveDataCodec._fields(data, common, frozenset({"inventory", "strategy", "attack"}))
+        SaveDataCodec._fields(
+            data,
+            common,
+            frozenset({"inventory", "strategy", "attack", "wrapped", "confusion_turns"}),
+        )
         kind = ActorType(SaveDataCodec._string(data["type"]))
         required = common | ({"inventory"} if kind is ActorType.HERO else {"strategy"})
         if kind is ActorType.BOSS:
             required.add("attack")
-        SaveDataCodec._fields(data, required)
+        SaveDataCodec._fields(data, required, frozenset({"wrapped", "confusion_turns"}))
         return ActorData(
             kind,
             SaveDataCodec._params(data["params"]),
             SaveDataCodec._position(data["position"]),
+            wrapped=SaveDataCodec._boolean(data["wrapped"]) if "wrapped" in data else False,
             inventory=SaveDataCodec._inventory(data["inventory"]) if "inventory" in data else None,
             strategy=StrategyType(SaveDataCodec._string(data["strategy"]))
             if "strategy" in data
             else None,
             attack=SaveDataCodec._attack(data["attack"]) if "attack" in data else None,
+            confusion_turns=SaveDataCodec._integer(data["confusion_turns"])
+            if "confusion_turns" in data
+            else None,
         )
 
     @staticmethod

@@ -6,6 +6,8 @@ from game import IActor
 from hero import Hero, IEvent
 from monster_strategies.simple_monster_strategy import SimpleMonsterStrategy
 from monsters import BossMonster, Monster
+from monsters.confusing_decorator import ConfusingDecorator
+from monsters.enemy_interface import IEnemy
 from positioning import IMap
 from serializing.cell_object_loader import ICellObjectLoader
 from serializing.one_time_bonus_loader import OneTimeBonusLoader
@@ -26,6 +28,10 @@ class IActorLoader:
     @staticmethod
     def save_to(actor: IActor) -> ActorData:
         """Capture the state of a supported actor."""
+        confusion_turns = None
+        if isinstance(actor, ConfusingDecorator):
+            confusion_turns = actor.get_remaining_turns()
+            actor = actor.unwrap()
         if type(actor) not in (Hero, Monster, BossMonster):
             raise ValueError(f"Unsupported actor type: {type(actor).__name__}")
         actor = cast(Hero | Monster | BossMonster, actor)
@@ -33,19 +39,40 @@ class IActorLoader:
         params = ParamsData.from_params(actor.get_params())
         if isinstance(actor, Hero):
             return ActorData(
-                ActorType.HERO, params, position, inventory=IActorLoader._save_inventory(actor)
+                ActorType.HERO,
+                params,
+                position,
+                False,
+                inventory=IActorLoader._save_inventory(actor),
             )
         if type(actor.get_strategy()) is not SimpleMonsterStrategy:
             raise ValueError(f"Unsupported monster strategy: {type(actor.get_strategy()).__name__}")
+        wrapped = confusion_turns is not None
         if isinstance(actor, BossMonster):
             return ActorData(
                 ActorType.BOSS,
                 params,
                 position,
+                wrapped,
                 strategy=StrategyType.SIMPLE,
                 attack=AttackData.from_attack(actor.get_attack()),
             )
-        return ActorData(ActorType.MONSTER, params, position, strategy=StrategyType.SIMPLE)
+        return ActorData(
+            ActorType.MONSTER,
+            params,
+            position,
+            wrapped,
+            strategy=StrategyType.SIMPLE,
+            confusion_turns=confusion_turns,
+        )
+
+    @staticmethod
+    def _wrap(enemy: IEnemy, wrapped: bool, confusion_turns: int | None) -> IEnemy:
+        if wrapped:
+            return ConfusingDecorator(enemy, 3 if confusion_turns is None else confusion_turns)
+        if confusion_turns is not None:
+            raise ValueError("Unwrapped enemy cannot have confusion turns")
+        return enemy
 
     @staticmethod
     def load_from(
@@ -55,16 +82,28 @@ class IActorLoader:
         params = data.params.to_params()
         position = PositionLoader.load_from(data.position)
         if data.type is ActorType.HERO:
-            if data.inventory is None or data.strategy is not None or data.attack is not None:
+            if (
+                data.inventory is None
+                or data.strategy is not None
+                or data.attack is not None
+                or data.wrapped
+                or data.confusion_turns is not None
+            ):
                 raise ValueError("Invalid hero data")
             return IActorLoader._load_hero(data.inventory, params, position, event_queue)
         if data.inventory is not None or data.strategy is not StrategyType.SIMPLE:
             raise ValueError("Invalid monster data")
+        if data.confusion_turns is not None and (not data.wrapped or data.confusion_turns <= 0):
+            raise ValueError("Invalid confusion turns")
+        if data.type is ActorType.BOSS and (data.wrapped or data.confusion_turns is not None):
+            raise ValueError("Boss cannot be confused")
         if game_map is None:
             raise ValueError("A map is required to restore an enemy")
         strategy = SimpleMonsterStrategy()
         if data.type is ActorType.MONSTER and data.attack is None:
-            return Monster(params, position, game_map, strategy)
+            return IActorLoader._wrap(
+                Monster(params, position, game_map, strategy), data.wrapped, data.confusion_turns
+            )
         if data.type is ActorType.BOSS and data.attack is not None:
             return BossMonster(params, position, game_map, strategy, data.attack.to_attack())
         raise ValueError("Invalid actor type or attack")

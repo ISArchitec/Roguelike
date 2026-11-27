@@ -15,5 +15,6 @@ class ActorParams:
 
     def get_hit(self, force: int):
         # Think about more difficult formula
+        """Return updated parameters after applying force minus defence."""
         hit = max(force - self.defence, 0)
         return ActorParams(self.health - hit, self.defence, self.attack, self.speed)
